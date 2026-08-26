@@ -42,6 +42,8 @@ Adjusted intake:      2,200 kcal
 Today's adjusted deficit:  320 kcal
 ```
 
+The design system, including how contrast is solved and verified, is written up in **[docs/DESIGN.md](docs/DESIGN.md)**.
+
 **These are assumptions, not measurements**, and the app never lets you forget it. Every calorie figure in the UI is tagged `raw`, `adjusted`, `estimated`, or `derived`, and the full arithmetic chain is shown rather than hidden behind a single number.
 
 ### Why they are configurable
