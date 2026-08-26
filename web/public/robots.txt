@@ -1,0 +1,5 @@
+# This is a private personal dashboard that happens to sit on a public host.
+# It is gated by a login, but it should never be indexed or associated with
+# the parent domain in search results.
+User-agent: *
+Disallow: /

@@ -60,22 +60,28 @@ class Config:
         return f"{self.supabase_url.rstrip('/')}/auth/v1"
 
 
-def _require(name: str) -> str:
+def _require(name: str, strict: bool = True) -> str:
     value = os.environ.get(name, "").strip()
-    if not value:
+    if not value and strict:
         raise ConfigError(
             f"{name} is not set. Copy sync/.env.example to sync/.env and fill it in."
         )
     return value
 
 
-def load_config() -> Config:
+def load_config(strict: bool = True) -> Config:
+    """Load configuration.
+
+    `strict=False` returns a partially-filled config instead of raising, which
+    is what the doctor command needs: refusing to load because a value is
+    missing would stop it reporting which value is missing.
+    """
     _load_dotenv(ENV_PATH)
     return Config(
-        supabase_url=_require("SUPABASE_URL"),
-        supabase_anon_key=_require("SUPABASE_ANON_KEY"),
-        app_email=_require("APP_EMAIL"),
-        app_password=_require("APP_PASSWORD"),
+        supabase_url=_require("SUPABASE_URL", strict),
+        supabase_anon_key=_require("SUPABASE_ANON_KEY", strict),
+        app_email=_require("APP_EMAIL", strict),
+        app_password=_require("APP_PASSWORD", strict),
         # Garmin credentials are optional: without them the agent still runs
         # MyFitnessPal and reports Garmin as skipped rather than failing.
         garmin_email=os.environ.get("GARMIN_EMAIL", "").strip() or None,

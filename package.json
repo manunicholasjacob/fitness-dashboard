@@ -15,6 +15,7 @@
     "sync:garmin": "python sync/run_sync.py garmin",
     "sync:mfp": "python sync/run_sync.py mfp",
     "sync:status": "python sync/run_sync.py status",
-    "sync:login": "python sync/run_sync.py login"
+    "sync:login": "python sync/run_sync.py login",
+    "sync:doctor": "python sync/run_sync.py doctor"
   }
 }

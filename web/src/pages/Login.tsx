@@ -1,20 +1,45 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useAuth } from '../lib/auth'
 import { Button, inputClass } from '../components/ui'
 
+/**
+ * The address is remembered per device after the first successful sign-in, so
+ * in practice this screen asks for a password and nothing else. Only the email
+ * is stored, never the password.
+ */
+const REMEMBERED_EMAIL = 'mission-last-email'
+
 export function Login() {
   const { signIn, configured } = useAuth()
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(() => {
+    try {
+      return localStorage.getItem(REMEMBERED_EMAIL) ?? ''
+    } catch {
+      return ''
+    }
+  })
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const passwordRef = useRef<HTMLInputElement>(null)
+
+  // Returning device: jump straight to the only field that still needs input.
+  useEffect(() => {
+    if (email) passwordRef.current?.focus()
+  }, [email])
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     setBusy(true)
     setError(null)
     try {
-      await signIn(email.trim(), password)
+      const address = email.trim()
+      await signIn(address, password)
+      try {
+        localStorage.setItem(REMEMBERED_EMAIL, address)
+      } catch {
+        /* private mode, not worth failing a sign-in over */
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign-in failed.')
     } finally {
@@ -64,6 +89,7 @@ export function Login() {
               </label>
               <input
                 id="password"
+                ref={passwordRef}
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

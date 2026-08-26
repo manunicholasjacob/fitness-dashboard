@@ -4,6 +4,7 @@
     python run_sync.py garmin    Garmin only
     python run_sync.py mfp       MyFitnessPal only
     python run_sync.py login     one-time MyFitnessPal browser sign-in
+    python run_sync.py doctor    diagnose the whole setup and say what to fix
     python run_sync.py status    recent sync history
 
 Every provider run is independent: Garmin failing must not stop MyFitnessPal,
@@ -19,6 +20,7 @@ import sys
 from datetime import date, datetime, time, timedelta
 
 from .config import BROWSER_PROFILE, ConfigError, load_config
+from .doctor import run_doctor
 from .garmin import GarminAdapter, GarminError, date_range
 from .mfp import MfpAdapter, MfpError
 from .store import Store, StoreError
@@ -188,7 +190,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="run_sync", description="Fitness dashboard sync agent")
     parser.add_argument(
         "command",
-        choices=["all", "garmin", "mfp", "login", "status"],
+        choices=["all", "garmin", "mfp", "login", "doctor", "status"],
         nargs="?",
         default="all",
     )
@@ -203,13 +205,21 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     try:
-        config = load_config()
+        # The doctor exists to report missing configuration, so it must be able
+        # to load a partial config rather than refusing to start.
+        config = load_config(strict=args.command != "doctor")
     except ConfigError as exc:
         print(f"Configuration error: {exc}", file=sys.stderr)
+        print("Run 'npm run sync:doctor' for a full checklist.", file=sys.stderr)
         return 2
 
     if args.command == "login":
         return cmd_login(config)
+
+    # doctor runs before the Supabase sign-in below, because diagnosing a
+    # broken sign-in is exactly one of the things it is for.
+    if args.command == "doctor":
+        return run_doctor(config)
 
     days = args.days or config.backfill_days
 
