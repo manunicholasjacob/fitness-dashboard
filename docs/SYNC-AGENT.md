@@ -178,6 +178,22 @@ npm run sync              # last 3 days
 python sync/run_sync.py all --days 14
 ```
 
+## The dashboard and the Garmin app disagree
+
+Usually neither is wrong. Garmin's servers only hold what the watch has
+uploaded; the phone app talks to the watch directly over Bluetooth and is
+therefore routinely ahead. If the watch last uploaded at 09:04 and it is now
+14:00, the app shows five hours of activity that Garmin Connect's own API has
+never seen, and the dashboard faithfully reports the older figure.
+
+The sync records `wellnessEndTimeGmt` as `garmin_data_through`, and today's
+activity card says which moment the numbers describe. Past 90 minutes it turns
+to the warning tone and names the gap. Opening the Garmin Connect app on the
+phone forces an upload; the next sync then agrees.
+
+If the timestamp is current and the numbers still differ, that is a real
+problem worth chasing.
+
 ## Failure behaviour
 
 Each provider runs independently. Garmin failing does not stop MyFitnessPal, because a half-synced day beats no day.
