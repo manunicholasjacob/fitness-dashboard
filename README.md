@@ -1,6 +1,6 @@
 # Energy Deficit Mission Control
 
-**Live:** https://manunicholasjacob.com/fitness-dashboard/
+**Live:** https://fitness-dashboard-emv.pages.dev/
 
 A personal fitness dashboard built around a single question:
 
@@ -216,9 +216,23 @@ The test suite covers the worked examples from the specification (2,800 x 0.85 a
 
 ## Deployment
 
-Push to `main`. The GitHub Actions workflow typechecks, tests, builds, verifies the bundle is actually configured, and publishes to GitHub Pages. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository secrets first.
+Push to `main`. The workflow typechecks, runs the tests, builds, refuses to
+publish a bundle that is not actually configured, and deploys to Cloudflare
+Pages.
 
-Routing uses `HashRouter` because GitHub Pages cannot rewrite deep links to `index.html`.
+Hosting is Cloudflare rather than GitHub Pages for one specific reason: GitHub
+Pages project sites inherit the custom domain set on the account's user site,
+so this dashboard was being served from a path under a personal professional
+domain with no way to opt out. Cloudflare gives it its own origin.
+
+Four repository secrets: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`,
+`CLOUDFLARE_API_TOKEN` (scoped to Cloudflare Pages:Edit and nothing else), and
+`CLOUDFLARE_ACCOUNT_ID`.
+
+Routing uses `HashRouter`, and `_redirects` serves the shell for any deep path.
+`_headers` sets frame, sniffing, referrer and permissions policy, caches
+fingerprinted assets immutably, and keeps the shell revalidating so a deploy
+always reaches a device that already has the old one.
 
 ## Self-hosting later
 

@@ -1,0 +1,3 @@
+# Routing is hash-based, so the document is always the root. This only matters
+# if a deep path is ever linked directly: serve the shell rather than a 404.
+/*  /index.html  200
