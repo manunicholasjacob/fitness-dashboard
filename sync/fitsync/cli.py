@@ -98,47 +98,40 @@ def sync_garmin(store: Store, config, days: int) -> int:
 
 
 def sync_mfp(store: Store, config, days: int) -> int:
-    """Pull nutrition from the printable diary over plain HTTP.
+    """Pull nutrition from the shared diary over plain HTTP.
 
-    No browser and no login: the printable diary is gated by MyFitnessPal's own
-    diary-sharing setting, so a shared diary is readable with a GET. The login
-    form sits behind a Cloudflare bot check that cannot be automated, and is
-    deliberately not involved.
+    One request covers the whole backfill window. No browser, no login: the
+    diary is read through MyFitnessPal's own diary-sharing feature.
     """
-    if not config.mfp_username:
+    if not (config.mfp_username and config.mfp_diary_key):
         log.info(
-            "MFP_USERNAME not set, skipping MyFitnessPal. Calories are entered on the dashboard."
+            "MyFitnessPal not configured, skipping. Set MFP_USERNAME and MFP_DIARY_KEY, "
+            "or enter calories on the dashboard."
         )
         return 0
 
     log_id = store.start_sync("mfp")
     try:
         adapter = MfpHttpAdapter(config.mfp_username, config.mfp_diary_key)
+        end_day = date.today()
+        start_day = end_day - timedelta(days=days - 1)
 
-        readable, detail = adapter.check_access()
-        if not readable:
-            raise MfpHttpError(detail)
-        log.info("MyFitnessPal: %s", detail)
-
-        rows = []
-        empty = 0
-        for day in date_range(days):
-            row = adapter.nutrition_for(day)
-            if row:
-                rows.append(row)
-                log.info("MyFitnessPal %s: %s kcal", day, row.get("raw_mfp_calories"))
-            else:
-                empty += 1
+        rows = adapter.nutrition_range(start_day, end_day)
+        for row in rows:
+            log.info(
+                "MyFitnessPal %s: %s kcal, %sg protein",
+                row["date"], row["raw_mfp_calories"], row.get("protein"),
+            )
 
         written = store.upsert_daily(rows)
 
-        # An empty diary is legitimate; an entirely empty window usually is not.
+        # An unlogged day is legitimate; an entirely empty window usually is not.
         status = "success" if rows else "partial"
         store.finish_sync(
             log_id,
             status=status,
             records=written,
-            error=None if rows else f"No diary entries found across {empty} days.",
+            error=None if rows else f"No diary entries across {days} days.",
         )
         return written
 

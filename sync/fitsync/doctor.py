@@ -252,26 +252,7 @@ def check_mfp(config: Config) -> list[Check]:
     if not readable:
         return [Check("MyFitnessPal diary", False, detail, MFP_SETUP)]
 
-    checks = [Check("MyFitnessPal diary", True, f"{config.mfp_username}: {detail}")]
-
-    try:
-        row = adapter.nutrition_for(date.today())
-    except Exception as exc:  # noqa: BLE001
-        return checks + [Check("MyFitnessPal read", False, str(exc)[:200], MFP_SETUP)]
-
-    if row:
-        checks.append(
-            Check("MyFitnessPal read", True, f"{row['raw_mfp_calories']:.0f} kcal logged today")
-        )
-    else:
-        checks.append(
-            Check(
-                "MyFitnessPal read",
-                True,
-                "diary readable, nothing logged today yet",
-            )
-        )
-    return checks
+    return [Check("MyFitnessPal diary", True, f"{config.mfp_username}: {detail}")]
 
 
 def run_doctor(config: Config) -> int:

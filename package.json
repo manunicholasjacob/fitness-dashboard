@@ -16,6 +16,7 @@
     "sync:mfp": "python sync/run_sync.py mfp",
     "sync:status": "python sync/run_sync.py status",
     "sync:login": "python sync/run_sync.py login",
-    "sync:doctor": "python sync/run_sync.py doctor"
+    "sync:doctor": "python sync/run_sync.py doctor",
+    "test:sync": "python sync/tests/test_mfp.py"
   }
 }

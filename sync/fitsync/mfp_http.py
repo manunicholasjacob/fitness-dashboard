@@ -1,34 +1,39 @@
-"""MyFitnessPal via the printable diary, over plain HTTP.
+"""MyFitnessPal nutrition, over plain HTTP with no browser.
 
-This replaces the browser entirely.
+How this works, and why it is not the obvious thing:
 
 MyFitnessPal's *login* form is protected by a Cloudflare Turnstile bot check
-that fails for any automated browser regardless of who types the password, and
-defeating a bot check is not something this project does. But logging in turns
-out to be unnecessary: the printable diary is gated by MyFitnessPal's own
-**diary sharing** setting, not by authentication. Set the diary to "Public" or
-"Locked with a Key" and the page is served to a plain HTTP GET, with no
-session, no cookies from a browser profile, and no challenge.
+that fails for any automated browser regardless of who types the password.
+Defeating a bot check is not something this project does, so signing in was a
+dead end.
 
-That makes this both simpler and far more durable than driving Chrome: nothing
-to expire, nothing to re-authenticate, no browser to install, and it runs
-anywhere.
+Logging in turns out to be unnecessary. MyFitnessPal has a first-class feature
+for letting someone else read your diary: Settings > Diary Settings > Diary
+Sharing, set to "Locked with a Key". That is exactly what this uses. The key is
+a sharing key, not an account credential, and it grants read access to the
+diary and nothing else.
 
-The trade is a deliberate privacy decision the account owner makes: "Locked
-with a Key" keeps the diary unreadable without the key, which is why it is the
-recommended setting rather than "Public".
+The printable-diary page renders its table client-side, so scraping the HTML
+returns an empty shell. The page gets its data from a JSON endpoint, and that
+endpoint is what this calls directly. The result is structured data rather than
+parsed markup: exact figures, no layout assumptions, and one request covers a
+whole date range.
+
+Per-entry nutrition is read from the entry's own `nutritional_contents`, not the
+food's. The food's figures are per serving unit; the entry's are what was
+actually eaten. Half a jar of sauce is 45 kcal at the entry level and 90 at the
+food level, and only one of those is what you consumed.
 """
 
 from __future__ import annotations
 
 import http.cookiejar
+import json
 import logging
-import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from datetime import date
-from html.parser import HTMLParser
+from datetime import date, timedelta
 from typing import Any
 
 log = logging.getLogger(__name__)
@@ -39,128 +44,67 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36"
 )
 
+# MyFitnessPal's field names on the left, this project's column names on the right.
+_NUTRIENTS = {
+    "protein": "protein",
+    "carbohydrates": "carbs",
+    "fat": "fat",
+    "fiber": "fiber",
+    "sugar": "sugar",
+    "sodium": "sodium",
+}
+
 
 class MfpHttpError(RuntimeError):
     pass
 
 
-# --- HTML table extraction ---------------------------------------------------
-
-_COLUMN_PATTERNS: list[tuple[re.Pattern[str], str]] = [
-    (re.compile(r"^calories?$", re.I), "calories"),
-    (re.compile(r"^(carbs?|carbohydrates?)", re.I), "carbs"),
-    (re.compile(r"^fat", re.I), "fat"),
-    (re.compile(r"^protein", re.I), "protein"),
-    (re.compile(r"^(fibre|fiber)", re.I), "fiber"),
-    (re.compile(r"^sugars?", re.I), "sugar"),
-    (re.compile(r"^sodium", re.I), "sodium"),
-]
-
-
-def _classify(header: str) -> str | None:
-    h = header.strip()
-    for pattern, key in _COLUMN_PATTERNS:
-        if pattern.match(h):
-            return key
-    return None
-
-
-def _number(raw: str) -> float | None:
-    cleaned = re.sub(r"[^0-9.\-]", "", raw)
-    if cleaned in ("", "-", "."):
+def _num(value: Any) -> float | None:
+    if value is None or isinstance(value, bool):
         return None
     try:
-        return float(cleaned)
-    except ValueError:
+        n = float(value)
+    except (TypeError, ValueError):
+        return None
+    return n if n == n else None
+
+
+def summarise_day(day: dict[str, Any]) -> dict[str, float] | None:
+    """Total one day's food entries.
+
+    Returns None for a day with no entries, so an unlogged day is recorded as
+    unknown rather than as a genuine zero-calorie day. The difference matters:
+    the mission only counts days where intake is actually known.
+    """
+    entries = day.get("food_entries") or []
+    if not entries:
         return None
 
+    totals: dict[str, float] = {"calories": 0.0}
+    seen_calories = False
 
-class _TableParser(HTMLParser):
-    """Collects every table as a list of rows of cell text."""
+    for entry in entries:
+        contents = entry.get("nutritional_contents") or {}
 
-    def __init__(self) -> None:
-        super().__init__(convert_charrefs=True)
-        self.tables: list[list[list[str]]] = []
-        self._table: list[list[str]] | None = None
-        self._row: list[str] | None = None
-        self._cell: list[str] | None = None
+        energy = contents.get("energy") or {}
+        kcal = _num(energy.get("value"))
+        if kcal is not None:
+            # Guard against a locale returning kilojoules.
+            if str(energy.get("unit", "")).lower().startswith("kilojoule"):
+                kcal = kcal / 4.184
+            totals["calories"] += kcal
+            seen_calories = True
 
-    def handle_starttag(self, tag: str, attrs: Any) -> None:
-        if tag == "table":
-            self._table = []
-        elif tag == "tr" and self._table is not None:
-            self._row = []
-        elif tag in ("td", "th") and self._row is not None:
-            self._cell = []
+        for source, target in _NUTRIENTS.items():
+            value = _num(contents.get(source))
+            if value is not None:
+                totals[target] = totals.get(target, 0.0) + value
 
-    def handle_endtag(self, tag: str) -> None:
-        if tag in ("td", "th") and self._cell is not None and self._row is not None:
-            self._row.append(" ".join("".join(self._cell).split()))
-            self._cell = None
-        elif tag == "tr" and self._row is not None and self._table is not None:
-            self._table.append(self._row)
-            self._row = None
-        elif tag == "table" and self._table is not None:
-            self.tables.append(self._table)
-            self._table = None
-
-    def handle_data(self, data: str) -> None:
-        if self._cell is not None:
-            self._cell.append(data)
-
-
-def extract_totals(html: str) -> dict[str, float] | None:
-    """Pull the day's totals out of a printable-diary page.
-
-    Mirrors the browser extractor exactly: find the table with a Calories
-    header, then take the LAST totals-style row in it, because earlier ones are
-    per-meal subtotals and a "Goal" row can follow the real total.
-    """
-    parser = _TableParser()
-    parser.feed(html)
-
-    for table in reversed(parser.tables):
-        if len(table) < 2:
-            continue
-
-        headers: list[str] | None = None
-        for row in table:
-            if any(re.match(r"^calories?$", c.strip(), re.I) for c in row):
-                headers = row
-                break
-        if not headers:
-            continue
-
-        totals: list[str] | None = None
-        for row in table:
-            if row and re.match(r"^total", row[0].strip(), re.I):
-                totals = row
-        if not totals:
-            continue
-
-        out: dict[str, float] = {}
-        for i, header in enumerate(headers):
-            key = _classify(header)
-            if key and i < len(totals):
-                value = _number(totals[i])
-                if value is not None:
-                    out[key] = value
-        if out.get("calories") is not None:
-            return out
-    return None
-
-
-# --- diary fetching ----------------------------------------------------------
-
-_PRIVATE_MARKERS = (
-    "maintains a private diary",
-    "private diary",
-    "diary is private",
-)
+    return totals if seen_calories else None
 
 
 class MfpHttpAdapter:
-    """Reads the printable diary with no browser and no login."""
+    """Reads the shared diary. No browser, no login, no bot check."""
 
     def __init__(self, username: str, key: str | None = None, timeout: int = 30) -> None:
         if not username:
@@ -168,113 +112,129 @@ class MfpHttpAdapter:
         self.username = username.strip().lstrip("@")
         self.key = key or None
         self.timeout = timeout
+
         self._jar = http.cookiejar.CookieJar()
         self._opener = urllib.request.build_opener(
             urllib.request.HTTPCookieProcessor(self._jar)
         )
         self._opener.addheaders = [
             ("User-Agent", USER_AGENT),
-            ("Accept", "text/html,application/xhtml+xml"),
+            ("Accept", "application/json, text/html"),
             ("Accept-Language", "en-US,en;q=0.9"),
         ]
-        self._unlocked = False
 
-    def _get(self, url: str) -> str:
+    def diary_url(self, start: date, end: date) -> str:
+        return (
+            f"{BASE}/reports/printable-diary/{urllib.parse.quote(self.username)}"
+            f"?from={start.isoformat()}&to={end.isoformat()}"
+        )
+
+    def fetch_range(self, start: date, end: date) -> list[dict[str, Any]]:
+        """Fetch every day between two dates in a single request."""
+        if not self.key:
+            raise MfpHttpError(
+                "No diary key configured. Set MFP_DIARY_KEY in sync/.env to the key "
+                "from MyFitnessPal under Settings > Diary Settings > Diary Sharing."
+            )
+
+        endpoint = (
+            f"{BASE}/api/services/authenticate_diary_key"
+            f"?username={urllib.parse.quote(self.username)}"
+        )
+        payload = {
+            "key": self.key,
+            "username": self.username,
+            "from": start.isoformat(),
+            "to": end.isoformat(),
+            "show_food_diary": 1,
+            "show_food_notes": 0,
+            "show_exercise_diary": 0,
+            "show_exercise_notes": 0,
+        }
+
+        request = urllib.request.Request(
+            endpoint, data=json.dumps(payload).encode(), method="POST"
+        )
+        request.add_header("Content-Type", "application/json")
+        request.add_header("Referer", self.diary_url(start, end))
+        request.add_header("Origin", BASE)
+
         try:
-            with self._opener.open(url, timeout=self.timeout) as resp:
-                return resp.read().decode("utf-8", errors="replace")
+            with self._opener.open(request, timeout=self.timeout) as resp:
+                raw = resp.read().decode("utf-8", errors="replace")
         except urllib.error.HTTPError as exc:
-            raise MfpHttpError(f"GET {url} returned {exc.code}") from exc
+            detail = exc.read().decode("utf-8", errors="replace")[:200]
+            if exc.code in (401, 403):
+                raise MfpHttpError(
+                    "MyFitnessPal rejected the diary key. Check MFP_DIARY_KEY against "
+                    "Settings > Diary Settings > Diary Sharing, exactly as typed there."
+                ) from exc
+            if exc.code == 404:
+                raise MfpHttpError(
+                    f"MyFitnessPal does not recognise the username '{self.username}'. "
+                    "MFP_USERNAME is the last part of your profile URL."
+                ) from exc
+            raise MfpHttpError(f"Diary request returned {exc.code}: {detail}") from exc
         except urllib.error.URLError as exc:
             raise MfpHttpError(f"Could not reach MyFitnessPal: {exc.reason}") from exc
 
-    def diary_url(self, day: date) -> str:
-        iso = day.isoformat()
-        return f"{BASE}/reports/printable-diary/{urllib.parse.quote(self.username)}?from={iso}&to={iso}"
-
-    def _submit_key(self, html: str, url: str) -> str:
-        """Answer a 'locked with a key' prompt, if one is shown."""
-        if not self.key:
+        lowered = raw[:400].lower()
+        if "not correct" in lowered or "incorrect" in lowered:
             raise MfpHttpError(
-                "This diary is locked with a key and no key is configured. "
-                "Set MFP_DIARY_KEY in sync/.env to the key you chose in "
-                "MyFitnessPal under Settings > Diary Settings > Diary Sharing."
+                "MyFitnessPal says the diary key is not correct. Check MFP_DIARY_KEY, "
+                "including capitalisation."
             )
 
-        # The prompt is a small form; find its action and the key field name.
-        action_match = re.search(r'<form[^>]+action="([^"]+)"', html, re.I)
-        field_match = re.search(
-            r'<input[^>]+name="([^"]*(?:key|password)[^"]*)"', html, re.I
-        )
-        action = urllib.parse.urljoin(url, action_match.group(1)) if action_match else url
-        field = field_match.group(1) if field_match else "key"
-
-        data = urllib.parse.urlencode({field: self.key}).encode()
-        request = urllib.request.Request(action, data=data, method="POST")
-        request.add_header("Content-Type", "application/x-www-form-urlencoded")
-        request.add_header("Referer", url)
         try:
-            with self._opener.open(request, timeout=self.timeout) as resp:
-                resp.read()
-        except urllib.error.HTTPError as exc:
-            raise MfpHttpError(f"Submitting the diary key returned {exc.code}") from exc
+            data = json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise MfpHttpError(
+                f"MyFitnessPal returned something that is not JSON: {raw[:160]}"
+            ) from exc
 
-        self._unlocked = True
-        return self._get(url)
+        if not isinstance(data, list):
+            raise MfpHttpError(f"Unexpected diary payload shape: {type(data).__name__}")
+        return data
+
+    def nutrition_range(self, start: date, end: date) -> list[dict[str, Any]]:
+        """Rows ready to upsert, one per day that actually has entries."""
+        rows: list[dict[str, Any]] = []
+        for day in self.fetch_range(start, end):
+            iso = str(day.get("date", ""))[:10]
+            if not iso:
+                continue
+            totals = summarise_day(day)
+            if not totals:
+                continue
+            rows.append(
+                {
+                    "date": iso,
+                    "raw_mfp_calories": round(totals["calories"], 1),
+                    "protein": round(totals["protein"], 1) if "protein" in totals else None,
+                    "carbs": round(totals["carbs"], 1) if "carbs" in totals else None,
+                    "fat": round(totals["fat"], 1) if "fat" in totals else None,
+                    "fiber": round(totals["fiber"], 1) if "fiber" in totals else None,
+                    "sugar": round(totals["sugar"], 1) if "sugar" in totals else None,
+                    "sodium": round(totals["sodium"], 1) if "sodium" in totals else None,
+                    "nutrition_source": "mfp",
+                }
+            )
+        return rows
 
     def nutrition_for(self, day: date) -> dict[str, Any] | None:
-        url = self.diary_url(day)
-        html = self._get(url)
-
-        lowered = html.lower()
-        needs_key = "locked with a key" in lowered or (
-            "name=\"key\"" in lowered and "diary" in lowered
-        )
-        if needs_key and not self._unlocked:
-            html = self._submit_key(html, url)
-            lowered = html.lower()
-
-        if any(marker in lowered for marker in _PRIVATE_MARKERS):
-            raise MfpHttpError(
-                f"MyFitnessPal reports that {self.username}'s diary is private. "
-                "In MyFitnessPal go to Settings > Diary Settings > Diary Sharing and "
-                "choose 'Locked with a Key' (recommended) or 'Public', then put the key "
-                "in MFP_DIARY_KEY. Nothing else about your account changes."
-            )
-
-        totals = extract_totals(html)
-        if not totals or not totals.get("calories"):
-            log.info("No diary entries for %s", day.isoformat())
-            return None
-
-        return {
-            "date": day.isoformat(),
-            "raw_mfp_calories": totals.get("calories"),
-            "protein": totals.get("protein"),
-            "carbs": totals.get("carbs"),
-            "fat": totals.get("fat"),
-            "fiber": totals.get("fiber"),
-            "sugar": totals.get("sugar"),
-            "sodium": totals.get("sodium"),
-            "nutrition_source": "mfp",
-        }
+        rows = self.nutrition_range(day, day)
+        return rows[0] if rows else None
 
     def check_access(self) -> tuple[bool, str]:
         """Probe the diary and describe what came back."""
+        if not self.key:
+            return False, "MFP_DIARY_KEY is not set"
+
+        today = date.today()
         try:
-            html = self._get(self.diary_url(date.today()))
+            days = self.fetch_range(today - timedelta(days=6), today)
         except MfpHttpError as exc:
             return False, str(exc)
 
-        lowered = html.lower()
-        if "locked with a key" in lowered:
-            return (
-                (True, "diary is key-locked and a key is configured")
-                if self.key
-                else (False, "diary is key-locked but MFP_DIARY_KEY is not set")
-            )
-        if any(m in lowered for m in _PRIVATE_MARKERS):
-            return False, "diary sharing is set to Private"
-        if "printable diary" in lowered:
-            return True, "diary is readable"
-        return False, "unexpected response from MyFitnessPal"
+        logged = sum(1 for d in days if summarise_day(d))
+        return True, f"key accepted, {logged} of the last 7 days have entries"
