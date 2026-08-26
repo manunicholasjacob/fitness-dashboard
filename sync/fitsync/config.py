@@ -14,10 +14,33 @@ from pathlib import Path
 AGENT_ROOT = Path(__file__).resolve().parent.parent
 ENV_PATH = AGENT_ROOT / ".env"
 
+
+def _state_root() -> Path:
+    r"""Where to keep the browser profile and cached tokens.
+
+    Deliberately NOT inside the repository. Chromium cannot open a user-data
+    directory that lives in a OneDrive-synced folder (it fails with a bare
+    "spawn UNKNOWN"), and this project is commonly checked out under
+    OneDrive\Documents. Keeping this state in LOCALAPPDATA also means a cloud
+    sync client never uploads a live login session.
+    """
+    override = os.environ.get("FITSYNC_STATE_DIR", "").strip()
+    if override:
+        return Path(override)
+
+    if os.name == "nt":
+        base = os.environ.get("LOCALAPPDATA") or os.path.expanduser("~")
+    else:
+        base = os.environ.get("XDG_STATE_HOME") or os.path.join(os.path.expanduser("~"), ".local", "state")
+    return Path(base) / "fitness-dashboard-sync"
+
+
+STATE_ROOT = _state_root()
+
 # Playwright stores the logged-in MyFitnessPal session here. Treat it like a
 # password: it grants access to the account until the session expires.
-BROWSER_PROFILE = AGENT_ROOT / ".mfp-profile"
-GARMIN_TOKEN_DIR = AGENT_ROOT / ".garmin-tokens"
+BROWSER_PROFILE = STATE_ROOT / "mfp-profile"
+GARMIN_TOKEN_DIR = STATE_ROOT / "garmin-tokens"
 
 
 def _load_dotenv(path: Path) -> None:

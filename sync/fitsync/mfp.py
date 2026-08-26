@@ -111,24 +111,45 @@ class MfpAdapter:
     def __init__(self, username: str | None, headless: bool = True) -> None:
         self.username = username
         self.headless = headless
+        self.channel: str | None = None
         self._pw = None
         self._context: Any = None
+
+    # Prefer a browser already installed on the machine over Playwright's
+    # bundled Chromium. The bundled build needs a Visual C++ redistributable
+    # that plenty of Windows machines lack, and fails with an opaque
+    # "spawn UNKNOWN" when it is missing. An installed Chrome also stays
+    # patched without this project having to ship browser updates.
+    _CHANNELS = ("chrome", "msedge", None)
 
     def __enter__(self) -> "MfpAdapter":
         BROWSER_PROFILE.mkdir(parents=True, exist_ok=True)
         self._pw = _playwright()().start()
-        self._context = self._pw.chromium.launch_persistent_context(
-            str(BROWSER_PROFILE),
-            headless=self.headless,
-            viewport={"width": 1280, "height": 900},
-            # A stock desktop UA: the printable diary is a normal page request,
-            # and pretending to be something exotic only invites challenges.
-            user_agent=(
-                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
-            ),
+
+        launch_errors: list[str] = []
+        for channel in self._CHANNELS:
+            try:
+                kwargs: dict[str, Any] = {
+                    "headless": self.headless,
+                    "viewport": {"width": 1280, "height": 900},
+                }
+                if channel:
+                    kwargs["channel"] = channel
+                self._context = self._pw.chromium.launch_persistent_context(
+                    str(BROWSER_PROFILE), **kwargs
+                )
+                self.channel = channel or "bundled chromium"
+                log.info("Launched %s", self.channel)
+                return self
+            except Exception as exc:  # noqa: BLE001 - try the next candidate
+                launch_errors.append(f"{channel or 'bundled chromium'}: {exc}".split("Call log")[0].strip())
+
+        self._pw.stop()
+        self._pw = None
+        raise MfpError(
+            "Could not launch a browser. Tried Chrome, Edge and Playwright's bundled "
+            "Chromium:\n  - " + "\n  - ".join(launch_errors)
         )
-        return self
 
     def __exit__(self, *exc: object) -> None:
         try:
@@ -170,14 +191,41 @@ class MfpAdapter:
         except Exception:  # noqa: BLE001
             return None
 
-    def interactive_login(self) -> bool:
-        """Open a visible window so you can sign in once by hand."""
+    def interactive_login(self, timeout_seconds: int = 420) -> bool:
+        """Open a visible window and wait for you to sign in.
+
+        Polls for success instead of waiting on a keypress, so this works when
+        launched from a script or a scheduler with no attached terminal. Sign in
+        however you normally do, including "Continue with Google".
+        """
         page = self._page()
         page.goto(f"{BASE}/account/login", wait_until="domcontentloaded", timeout=60_000)
-        print("\nA browser window is open. Sign in to MyFitnessPal there.")
-        print("Complete any captcha or two-factor prompt, then return here.")
-        input("Press Enter once you can see your diary... ")
-        return "/account/login" not in page.url
+
+        print(f"\nA {self.channel} window is open at the MyFitnessPal login page.")
+        print('Sign in however you normally do, including "Continue with Google".')
+        print(f"Waiting up to {timeout_seconds // 60} minutes for you to finish.\n", flush=True)
+
+        waited = 0
+        step = 3
+        while waited < timeout_seconds:
+            page.wait_for_timeout(step * 1000)
+            waited += step
+
+            # Google's consent screens are part of the flow, so only a URL that
+            # is neither the MFP login nor a Google auth page counts as done.
+            url = page.url
+            settled = "/account/login" not in url and "accounts.google.com" not in url
+            if settled:
+                page.wait_for_timeout(2500)
+                if "/account/login" not in page.url:
+                    print(f"Signed in after {waited}s.", flush=True)
+                    return True
+
+            if waited % 30 == 0:
+                print(f"  still waiting ({waited}s)...", flush=True)
+
+        print("Timed out waiting for sign-in.")
+        return False
 
     # --- data ---------------------------------------------------------------
 
