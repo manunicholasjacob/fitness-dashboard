@@ -211,32 +211,54 @@ def check_garmin(config: Config) -> list[Check]:
     return checks
 
 
+MFP_PASSWORD_FIX = (
+    "Set MFP_EMAIL and MFP_PASSWORD in sync/.env. If you sign in to MyFitnessPal "
+    "with Google you have no password yet: set one at "
+    "myfitnesspal.com/account/forgot_password. Do NOT rely on Google sign-in here, "
+    "because Google refuses OAuth from automated browsers by design."
+)
+
+
 def check_mfp(config: Config) -> list[Check]:
-    if not BROWSER_PROFILE.exists():
+    has_credentials = bool(config.mfp_email and config.mfp_password)
+
+    if not BROWSER_PROFILE.exists() and not has_credentials:
         return [
             Check(
-                "MyFitnessPal session",
+                "MyFitnessPal credentials",
                 False,
-                "no browser profile yet",
-                "Run: npm run sync:login  (a window opens, sign in once with Google or "
-                "email; the session is then reused headlessly forever)",
+                "no credentials and no saved session",
+                MFP_PASSWORD_FIX,
             )
         ]
 
     from .mfp import MfpAdapter, MfpError
 
     try:
-        with MfpAdapter(os.environ.get("MFP_USERNAME", "").strip() or None, headless=config.headless) as mfp:
+        with MfpAdapter(config.mfp_username, headless=config.headless) as mfp:
             if not mfp.is_signed_in():
-                return [
+                if not has_credentials:
+                    return [
+                        Check(
+                            "MyFitnessPal session",
+                            False,
+                            "saved session has expired and no credentials are set",
+                            MFP_PASSWORD_FIX,
+                        )
+                    ]
+                try:
+                    mfp.login_with_password(config.mfp_email, config.mfp_password)
+                except MfpError as exc:
+                    return [Check("MyFitnessPal sign-in", False, str(exc)[:220], MFP_PASSWORD_FIX)]
+                checks = [Check("MyFitnessPal sign-in", True, "signed in with stored password")]
+            else:
+                checks = [
                     Check(
                         "MyFitnessPal session",
-                        False,
-                        "saved session has expired",
-                        "Run: npm run sync:login",
+                        True,
+                        "signed in" + ("" if has_credentials else ", no credentials set as backup"),
                     )
                 ]
-            checks = [Check("MyFitnessPal session", True, "signed in")]
 
             username = mfp.username or mfp.detect_username()
             if username:

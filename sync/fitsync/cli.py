@@ -97,15 +97,31 @@ def sync_garmin(store: Store, config, days: int) -> int:
 
 
 def sync_mfp(store: Store, config, days: int) -> int:
-    if not BROWSER_PROFILE.exists():
-        log.error("No MyFitnessPal browser profile yet. Run: python run_sync.py login")
+    has_credentials = bool(config.mfp_email and config.mfp_password)
+    if not BROWSER_PROFILE.exists() and not has_credentials:
+        log.error(
+            "No MyFitnessPal credentials and no saved session. Set MFP_EMAIL and "
+            "MFP_PASSWORD in sync/.env, or run: npm run sync:login"
+        )
         return 0
 
-    username = os.environ.get("MFP_USERNAME", "").strip() or None
+    username = config.mfp_username
     log_id = store.start_sync("mfp")
 
     try:
         with MfpAdapter(username, headless=config.headless) as mfp:
+            # A saved session is faster, but credentials mean an expired one
+            # repairs itself instead of waiting for someone to notice.
+            if not mfp.is_signed_in():
+                if not has_credentials:
+                    raise MfpError(
+                        "The saved MyFitnessPal session has expired and no credentials "
+                        "are set. Add MFP_EMAIL and MFP_PASSWORD to sync/.env, or run: "
+                        "npm run sync:login"
+                    )
+                log.info("Session expired, signing in with stored credentials.")
+                mfp.login_with_password(config.mfp_email, config.mfp_password)
+
             if not username:
                 username = mfp.detect_username()
                 if not username:

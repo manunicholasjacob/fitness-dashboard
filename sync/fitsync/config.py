@@ -70,6 +70,9 @@ class Config:
     app_password: str
     garmin_email: str | None
     garmin_password: str | None
+    mfp_email: str | None
+    mfp_password: str | None
+    mfp_username: str | None
     timezone: str
     backfill_days: int
     headless: bool
@@ -109,6 +112,11 @@ def load_config(strict: bool = True) -> Config:
         # MyFitnessPal and reports Garmin as skipped rather than failing.
         garmin_email=os.environ.get("GARMIN_EMAIL", "").strip() or None,
         garmin_password=os.environ.get("GARMIN_PASSWORD", "").strip() or None,
+        # MyFitnessPal credentials are optional: with them the agent signs in by
+        # itself, without them it falls back to a saved browser session.
+        mfp_email=os.environ.get("MFP_EMAIL", "").strip() or None,
+        mfp_password=os.environ.get("MFP_PASSWORD", "").strip() or None,
+        mfp_username=os.environ.get("MFP_USERNAME", "").strip() or None,
         timezone=os.environ.get("TIMEZONE", "America/Chicago").strip(),
         backfill_days=int(os.environ.get("BACKFILL_DAYS", "3")),
         headless=os.environ.get("HEADLESS", "1").strip() != "0",

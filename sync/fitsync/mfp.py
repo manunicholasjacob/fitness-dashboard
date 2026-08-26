@@ -199,6 +199,86 @@ class MfpAdapter:
         except Exception:  # noqa: BLE001
             return None
 
+    def login_with_password(self, email: str, password: str) -> bool:
+        """Sign in on MyFitnessPal's own form, with no third-party provider.
+
+        This is the preferred path. Google deliberately refuses OAuth sign-in
+        from automated browsers ("This browser or app may not be secure"), which
+        is a security control, not an obstacle to route around. Signing in
+        against MyFitnessPal directly avoids the question entirely, needs no
+        visible window, and re-establishes the session by itself whenever it
+        lapses.
+        """
+        page = self._page()
+        page.goto(f"{BASE}/account/login", wait_until="domcontentloaded", timeout=60_000)
+        page.wait_for_timeout(2500)
+
+        if "/account/login" not in page.url:
+            log.info("Already signed in.")
+            return True
+
+        email_selectors = [
+            'input[name="username"]',
+            'input[type="email"]',
+            'input[name="email"]',
+            'input[autocomplete="username"]',
+            '#email',
+        ]
+        password_selectors = [
+            'input[name="password"]',
+            'input[type="password"]',
+            'input[autocomplete="current-password"]',
+            '#password',
+        ]
+
+        def fill_first(selectors: list[str], value: str, what: str) -> None:
+            for sel in selectors:
+                try:
+                    field = page.locator(sel).first
+                    if field.count() > 0 and field.is_visible():
+                        field.fill(value, timeout=10_000)
+                        return
+                except Exception:  # noqa: BLE001 - try the next selector
+                    continue
+            raise MfpError(f"Could not find the {what} field on the MyFitnessPal login page.")
+
+        fill_first(email_selectors, email, "email")
+        fill_first(password_selectors, password, "password")
+
+        for sel in ['button[type="submit"]', 'input[type="submit"]', 'button:has-text("Log In")',
+                    'button:has-text("Sign In")', 'button:has-text("Continue")']:
+            try:
+                btn = page.locator(sel).first
+                if btn.count() > 0 and btn.is_visible():
+                    btn.click(timeout=10_000)
+                    break
+            except Exception:  # noqa: BLE001
+                continue
+        else:
+            page.keyboard.press("Enter")
+
+        # Give the redirect, and any interstitial, time to settle.
+        for _ in range(20):
+            page.wait_for_timeout(1500)
+            if "/account/login" not in page.url:
+                log.info("Signed in to MyFitnessPal with a password.")
+                return True
+
+        body = ""
+        try:
+            body = page.inner_text("body")[:400]
+        except Exception:  # noqa: BLE001
+            pass
+        if "captcha" in body.lower() or "verify" in body.lower():
+            raise MfpError(
+                "MyFitnessPal presented a captcha or verification step. Run once with "
+                "HEADLESS=0 to clear it by hand; the session is reused afterwards."
+            )
+        raise MfpError(
+            "MyFitnessPal did not accept those credentials. If your account was created "
+            "with Google sign-in, set a password first at myfitnesspal.com/account/forgot_password"
+        )
+
     def interactive_login(self, timeout_seconds: int = 420) -> bool:
         """Open a visible window and wait for you to sign in.
 
@@ -209,9 +289,36 @@ class MfpAdapter:
         page = self._page()
         page.goto(f"{BASE}/account/login", wait_until="domcontentloaded", timeout=60_000)
 
+        # An unlabelled browser window that appears on its own looks like
+        # something to close, not something to use. Raise it and say what it is.
+        try:
+            page.bring_to_front()
+            page.add_style_tag(
+                content="""
+                #fitsync-banner{position:fixed;inset:0 0 auto 0;z-index:2147483647;
+                  background:#0b0f19;color:#e8eefc;font:600 15px/1.5 system-ui,sans-serif;
+                  padding:14px 20px;text-align:center;border-bottom:3px solid #38e07b}
+                #fitsync-banner b{color:#38e07b}
+                body{padding-top:64px !important}
+                """
+            )
+            page.evaluate(
+                """() => {
+                  if (document.getElementById('fitsync-banner')) return;
+                  const el = document.createElement('div');
+                  el.id = 'fitsync-banner';
+                  el.innerHTML = 'Fitness dashboard setup: <b>sign in to MyFitnessPal here</b>, '
+                    + 'then leave this window open until your diary loads. Closing it early saves nothing.';
+                  document.body.prepend(el);
+                }"""
+            )
+        except Exception:  # noqa: BLE001 - decoration must never block sign-in
+            pass
+
         print(f"\nA {self.channel} window is open at the MyFitnessPal login page.")
         print('Sign in however you normally do, including "Continue with Google".')
-        print(f"Waiting up to {timeout_seconds // 60} minutes for you to finish.\n", flush=True)
+        print("Leave the window open until your food diary loads.")
+        print(f"Waiting up to {timeout_seconds // 60} minutes.\n", flush=True)
 
         waited = 0
         step = 3
