@@ -90,51 +90,85 @@ export function PinLock({
   const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6 py-10">
-      <h1 className="text-center text-xl font-bold tracking-[0.24em] text-[var(--color-accent)]">
-        MANU FITNESS
-      </h1>
-      <p className="mt-2.5 text-center text-sm text-[var(--color-muted)]">
-        {busy ? 'Checking' : 'Enter your code'}
-      </p>
-
+    <div className="relative isolate flex min-h-[100dvh] flex-col items-center justify-center px-6 py-10">
+      {/* The same ambient wash the mission card uses, so the app's front door
+          and its centrepiece are lit the same way. */}
       <div
-        className={`mt-8 flex gap-4 ${error ? 'animate-[shake_0.5s]' : ''}`}
-        role="status"
-        aria-live="polite"
-        aria-label={error ?? `${digits.length} of ${length} digits entered`}
-      >
-        {Array.from({ length }, (_, i) => (
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 top-1/2 -z-10 h-[36rem] -translate-y-1/2
+          bg-[radial-gradient(44%_46%_at_50%_50%,var(--hero-glow),var(--hero-glow-mid)_55%,transparent_78%)]"
+      />
+
+      <div className="rise flex w-full max-w-[19rem] flex-col items-center">
+        <h1 className="flex items-center gap-2.5 text-center text-lg font-bold
+          tracking-[0.22em] text-[var(--color-accent)]">
           <span
-            key={i}
-            className={`h-4 w-4 rounded-full border-2 transition ${
-              error
-                ? 'border-[var(--color-danger)] bg-[var(--color-danger)]'
-                : i < digits.length
-                  ? 'border-[var(--color-accent)] bg-[var(--color-accent)]'
-                  : 'border-[var(--color-edge)]'
-            }`}
+            aria-hidden="true"
+            className="h-2 w-2 rounded-full bg-[var(--color-accent)]
+              shadow-[0_0_0_4px_var(--color-accent-quiet)]"
           />
-        ))}
-      </div>
+          MANU FITNESS
+        </h1>
+        <p className="mt-3 text-center text-sm text-[var(--color-muted)]">
+          {busy ? 'Checking' : 'Enter your code'}
+        </p>
 
-      <p className="mt-4 min-h-10 max-w-[18rem] text-center text-xs text-[var(--color-danger-text)]">
-        {error ?? ''}
-      </p>
+        <div
+          className={`mt-7 flex gap-3.5 ${error ? 'animate-[shake_0.5s]' : ''}`}
+          role="status"
+          aria-live="polite"
+          aria-label={error ?? `${digits.length} of ${length} digits entered`}
+        >
+          {Array.from({ length }, (_, i) => (
+            <span
+              key={i}
+              // Filled dots grow very slightly, so entry registers as motion in
+              // the corner of the eye and not only as a colour change.
+              className={`h-3.5 w-3.5 rounded-full transition duration-300
+                ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                  error
+                    ? 'scale-100 bg-[var(--color-danger)]'
+                    : i < digits.length
+                      ? 'scale-110 bg-[var(--color-accent)]'
+                      // --color-edge is a border tone and lands at 1.11:1 on
+                      // the page, which is invisible. These dots are the only
+                      // indication of how much of the code has been entered.
+                      : 'scale-100 bg-[var(--color-faint)]'
+                }`}
+            />
+          ))}
+        </div>
 
-      <div className="grid w-full max-w-[17rem] grid-cols-3 gap-3">
-        {keys.map((k) => (
-          <KeypadButton key={k} label={k} onPress={() => push(k)} disabled={busy} />
-        ))}
-        <span />
-        <KeypadButton label="0" onPress={() => push('0')} disabled={busy} />
-        <KeypadButton
-          label="&#9003;"
-          onPress={back}
-          ariaLabel="Delete last digit"
-          disabled={busy}
-          muted
-        />
+        {/* Reserved height, so the keypad never jumps when an error appears. */}
+        <p className="mt-3 flex min-h-9 items-center px-2 text-center text-xs
+          text-[var(--color-danger-text)]">
+          {error ?? ''}
+        </p>
+
+        {/*
+         * The keypad is one object rather than twelve loose buttons: an outer
+         * tray with a hairline and an inner grid, the way a physical keypad has
+         * a bezel. Concentric radii, so the corners of the keys echo the corner
+         * of the tray instead of fighting it.
+         */}
+        <div className="w-full rounded-[1.75rem] bg-[var(--color-card)] p-3
+          ring-1 ring-[var(--color-edge)]
+          [box-shadow:var(--shadow-hero),inset_0_1px_0_var(--edge-highlight)]">
+          <div className="grid grid-cols-3 gap-2.5">
+            {keys.map((k) => (
+              <KeypadButton key={k} label={k} onPress={() => push(k)} disabled={busy} />
+            ))}
+            <span />
+            <KeypadButton label="0" onPress={() => push('0')} disabled={busy} />
+            <KeypadButton
+              label="&#9003;"
+              onPress={back}
+              ariaLabel="Delete last digit"
+              disabled={busy}
+              muted
+            />
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -159,14 +193,24 @@ function KeypadButton({
       onClick={onPress}
       disabled={disabled}
       aria-label={ariaLabel ?? label}
-      // 4rem is well past the 44px touch-target guidance, which matters more
+      // 3.75rem is well past the 44px touch-target guidance, which matters more
       // here than anywhere else: this is the first thing a thumb touches, every
       // single time the app opens.
-      className={`tnum h-16 rounded-[var(--radius-control)] border border-[var(--color-edge)] text-2xl font-semibold
-        transition duration-150 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.94]
+      //
+      // Round, because that is what a passcode key is everywhere a passcode is
+      // entered, and because a circle inside a squircle tray reads as a keypad
+      // where a grid of small squares reads as a table.
+      // aspect-square rather than a fixed height: the grid column is wider than
+      // any height that suits the type, and rounded-full on a non-square box
+      // gives an ellipse, not a key.
+      className={`tnum flex aspect-square w-full items-center justify-center rounded-full
+        bg-[var(--color-inset)] text-2xl font-semibold
+        ring-1 ring-inset ring-[var(--color-edge)]
+        transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]
+        hover:bg-[var(--color-card-raised)] hover:ring-[var(--color-faint)]
+        active:scale-[0.92] active:bg-[var(--color-accent-quiet)]
         disabled:opacity-40 disabled:active:scale-100
-        ${muted ? 'text-[var(--color-muted)]' : 'text-[var(--color-text)]'}
-        bg-[var(--color-card)] hover:bg-[var(--color-inset)]`}
+        ${muted ? 'text-[var(--color-muted)]' : 'text-[var(--color-text)]'}`}
     >
       {label === '&#9003;' ? '⌫' : label}
     </button>

@@ -18,10 +18,32 @@ const MORE = [
   { to: '/display', label: 'Display Mode' },
 ]
 
+/**
+ * A sync in progress, said quietly.
+ *
+ * The word "Syncing" in the corner is easy to miss and slightly shouty in caps.
+ * A pulsing dot beside it is read peripherally, which is the right amount of
+ * attention for something that happens four times a day and needs no action.
+ */
+function SyncingPulse() {
+  return (
+    <span className="flex items-center gap-1.5 text-[11px] text-[var(--color-muted)]">
+      <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full
+          bg-[var(--color-accent)] opacity-60" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]" />
+      </span>
+      Syncing
+    </span>
+  )
+}
+
 function Icon({ path }: { path: string }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-      strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5" aria-hidden="true">
+    /* 1.5 rather than 2: at 20px a two-pixel stroke reads as heavy and slightly
+       crude, and these sit beside 11px labels far lighter than that. */
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
+      strokeLinecap="round" strokeLinejoin="round" className="h-[22px] w-[22px]" aria-hidden="true">
       <path d={path} />
     </svg>
   )
@@ -116,14 +138,29 @@ export function Layout() {
       <StaleBanner />
 
       {/* Desktop / tablet navigation */}
-      <header className="sticky top-0 z-20 hidden border-b border-[var(--color-edge)] material
-        bg-[var(--color-ink)]/80 backdrop-blur-xl md:block">
-        <div className="mx-auto flex max-w-6xl items-center gap-1 px-6 py-2.5">
-          <span className="mr-5 flex items-center gap-2 text-sm font-bold tracking-[0.16em]
-            text-[var(--color-accent-text)]">
+      {/*
+       * A floating island rather than a bar welded to the top edge.
+       *
+       * An edge-to-edge bar reads as browser chrome; detaching it and letting
+       * the page scroll underneath makes it read as part of the app. The outer
+       * shell and inner core are separate layers so the pill has a real edge
+       * rather than a drawn-on border: hairline ring outside, highlight inside.
+       */}
+      <div className="sticky top-0 z-20 hidden px-6 pb-2 pt-4 md:block">
+        <header
+          // w-max, so the pill is the width of what is in it. Stretched to a
+          // container width it stops reading as an object and goes back to
+          // reading as a bar with rounded ends.
+          className="material mx-auto flex w-max max-w-full items-center gap-1 rounded-full
+            bg-[var(--color-surface)]/75 px-2.5 py-2 ring-1 ring-[var(--color-edge)]
+            backdrop-blur-xl
+            [box-shadow:var(--shadow-raised),inset_0_1px_0_var(--edge-highlight)]"
+        >
+          <span className="ml-2 mr-4 flex items-center gap-2 text-[13px] font-bold
+            tracking-[0.16em] text-[var(--color-accent-text)]">
             <span
               aria-hidden="true"
-              className="h-2 w-2 rounded-full bg-[var(--color-accent)]
+              className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]
                 shadow-[0_0_0_3px_var(--color-accent-quiet)]"
             />
             MISSION
@@ -134,8 +171,8 @@ export function Layout() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `rounded-[var(--radius-inner)] px-3 py-1.5 text-sm transition duration-200
-                 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                `rounded-full px-3 py-1.5 text-[13px] transition duration-300
+                 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] ${
                    isActive
                      ? 'bg-[var(--color-accent-quiet)] font-semibold text-[var(--color-accent-text)] ' +
                        'ring-1 ring-inset ring-[var(--color-accent-dim)]'
@@ -147,27 +184,27 @@ export function Layout() {
               {item.label}
             </NavLink>
           ))}
-          <div className="ml-auto flex items-center gap-3">
-            {refreshing && (
-              <span className="text-[11px] uppercase tracking-widest text-[var(--color-muted)]">
-                Syncing
-              </span>
-            )}
+          {/* A hairline divider, so the account controls read as a separate
+              group rather than as two more nav destinations. */}
+          <span aria-hidden="true" className="mx-2 h-4 w-px bg-[var(--color-edge)]" />
+          <div className="flex items-center gap-2 pr-1.5">
+            {refreshing && <SyncingPulse />}
             <span className="text-xs text-[var(--color-muted)]">{settings.displayName}</span>
             <button
               onClick={() => void signOut()}
-              className="text-xs text-[var(--color-muted)] underline-offset-2 hover:underline"
+              className="rounded-full px-2.5 py-1 text-xs text-[var(--color-muted)] transition
+                duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--color-inset)]
+                hover:text-[var(--color-text)] active:scale-[0.97]"
             >
               Sign out
             </button>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
 
       {/* Mobile header keeps the identity without stealing vertical space. */}
       <header className="material sticky top-0 z-20 flex items-center justify-between
-        border-b border-[var(--color-edge)] bg-[var(--color-ink)]/80 px-4 py-3
-        backdrop-blur-xl md:hidden">
+        bg-[var(--color-ink)]/80 px-4 py-3 backdrop-blur-xl md:hidden">
         <span className="flex items-center gap-2 text-xs font-bold tracking-[0.18em]
           text-[var(--color-accent-text)]">
           <span
@@ -177,63 +214,62 @@ export function Layout() {
           />
           MISSION
         </span>
-        {refreshing && (
-          <span className="text-[11px] uppercase tracking-widest text-[var(--color-muted)]">Syncing</span>
-        )}
+        {refreshing && <SyncingPulse />}
       </header>
 
       <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:px-6 md:pb-14 md:pt-7">
         <Outlet />
       </main>
 
-      {/* Mobile bottom navigation, thumb-reachable and safe-area aware. */}
+      {/*
+       * Mobile bottom navigation: thumb-reachable, safe-area aware, and a
+       * floating island rather than a bar welded to the bottom edge, to match
+       * the desktop nav.
+       *
+       * Detaching it costs a little width and buys two things: the page scrolls
+       * visibly underneath rather than being clipped by it, and on a phone with
+       * a home indicator the bar no longer fights the system gesture area for
+       * the same strip of glass.
+       */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-edge)] material bg-[var(--color-surface)]/95 backdrop-blur md:hidden"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className="fixed inset-x-3 z-30 md:hidden"
+        style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.625rem)' }}
       >
-        <div className="flex">
+        <div
+          className="material flex rounded-[1.375rem] bg-[var(--color-surface)]/85 p-1
+            ring-1 ring-[var(--color-edge)] backdrop-blur-xl
+            [box-shadow:var(--shadow-hero),inset_0_1px_0_var(--edge-highlight)]"
+        >
           {NAV.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]
-                 transition duration-200 active:scale-[0.94] ${
+                `relative flex flex-1 flex-col items-center gap-1 rounded-[1rem] py-2
+                 text-[11px] transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]
+                 active:scale-[0.94] ${
                    isActive
-                     ? 'font-semibold text-[var(--color-accent-text)]'
+                     ? 'bg-[var(--color-accent-quiet)] font-semibold text-[var(--color-accent-text)]'
                      : 'font-medium text-[var(--color-muted)]'
                  }`
               }
             >
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-[var(--color-accent)]"
-                    />
-                  )}
-                  <Icon path={item.icon} />
-                  {item.short}
-                </>
-              )}
+              <Icon path={item.icon} />
+              {item.short}
             </NavLink>
           ))}
           <NavLink
             to="/settings"
-            className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]
-              transition duration-200 active:scale-[0.94] ${
-                onMore ? 'font-semibold text-[var(--color-accent-text)]' : 'font-medium text-[var(--color-muted)]'
+            className={`relative flex flex-1 flex-col items-center gap-1 rounded-[1rem] py-2
+              text-[11px] transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]
+              active:scale-[0.94] ${
+                onMore
+                  ? 'bg-[var(--color-accent-quiet)] font-semibold text-[var(--color-accent-text)]'
+                  : 'font-medium text-[var(--color-muted)]'
               }`}
           >
-            {onMore && (
-              <span
-                aria-hidden="true"
-                className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-[var(--color-accent)]"
-              />
-            )}
             <Icon path="M4 6h16M4 12h16M4 18h16" />
             More
           </NavLink>

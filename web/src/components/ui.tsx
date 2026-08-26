@@ -32,10 +32,16 @@ export function Card({
   tone?: 'quiet' | 'raised' | 'hero'
   interactive?: boolean
 }) {
+  // The lit top edge goes inside the shadow declaration so both live on the same
+  // box-shadow property without one clobbering the other.
   const shape = {
     quiet: 'rounded-[var(--radius-card)] bg-[var(--color-card)] p-4 sm:p-5',
-    raised: 'rounded-[var(--radius-card)] bg-[var(--color-card)] p-4 shadow-[var(--shadow-raised)] sm:p-5',
-    hero: 'rounded-[var(--radius-hero)] bg-[var(--color-card)] p-5 shadow-[var(--shadow-hero)] sm:p-7',
+    raised:
+      'rounded-[var(--radius-card)] bg-[var(--color-card)] p-4 sm:p-5 ' +
+      '[box-shadow:var(--shadow-raised),inset_0_1px_0_var(--edge-highlight)]',
+    hero:
+      'rounded-[var(--radius-hero)] bg-[var(--color-card)] p-5 sm:p-7 ' +
+      '[box-shadow:var(--shadow-hero),inset_0_1px_0_var(--edge-highlight)]',
   }[tone]
 
   return (

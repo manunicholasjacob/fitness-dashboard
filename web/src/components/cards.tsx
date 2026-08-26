@@ -57,7 +57,7 @@ export function MissionCard({ compact = false }: { compact?: boolean }) {
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 -top-24 -z-10 h-72
-          bg-[radial-gradient(60%_100%_at_50%_0%,var(--hero-glow),transparent_70%)]"
+          bg-[radial-gradient(60%_100%_at_50%_0%,var(--hero-glow),var(--hero-glow-mid)_52%,transparent_78%)]"
       />
 
       <div className="text-center">
@@ -75,23 +75,33 @@ export function MissionCard({ compact = false }: { compact?: boolean }) {
 
         {/* The percent sign is set smaller and lighter than the figure. At the
             same weight it reads as a fourth digit and steals from the number. */}
-        <p aria-hidden="true" className="display mt-4 text-6xl text-[var(--color-accent)] sm:text-8xl">
+        <p aria-hidden="true" className="display mt-5 text-6xl text-[var(--color-accent)] sm:text-8xl">
           {p.percent.toFixed(1)}
           <span className="ml-0.5 align-baseline text-[0.42em] font-semibold tracking-normal opacity-70">
             %
           </span>
         </p>
 
-        <p className="tnum mt-4 text-base tracking-[-0.01em] text-[var(--color-text)] sm:text-lg">
+        <p className="tnum mt-3 text-base tracking-[-0.01em] text-[var(--color-text)] sm:text-lg">
           <span className="font-semibold">{formatInt(p.accumulated)}</span>{' '}
           <span className="text-[var(--color-muted)]">of {formatInt(p.target)} kcal</span>
         </p>
 
-        <div className="mx-auto mt-5 max-w-xl">
-          <ProgressBar percent={p.percent} height="h-2.5" />
+        {/*
+         * The bar sits in a shallow tray rather than directly on the card.
+         *
+         * Two enclosures with concentric radii, an outer hairline and an inner
+         * channel: the same trick a physical instrument uses to make a gauge
+         * look set into the panel rather than printed on it. It also gives the
+         * one element that is nearly empty at 0.2% something to be empty
+         * inside.
+         */}
+        <div className="mx-auto mt-5 max-w-lg">
+          <ProgressBar percent={p.percent} height="h-3" />
           {/* The two ends of the bar, labelled. A bar with no scale asks the
               reader to guess what full means. */}
-          <div className="mt-2 flex items-baseline justify-between text-[11px] text-[var(--color-muted)]">
+          <div className="mt-2 flex items-baseline justify-between text-[11px]
+            text-[var(--color-muted)]">
             <span className="tnum">{formatInt(p.remaining)} kcal to go</span>
             <span className="tnum">{formatInt(p.target)}</span>
           </div>
@@ -99,7 +109,7 @@ export function MissionCard({ compact = false }: { compact?: boolean }) {
       </div>
 
       {!compact && (
-        <div className="mt-7 grid grid-cols-2 gap-x-4 gap-y-6 border-t border-[var(--color-edge)] pt-6 sm:grid-cols-4">
+        <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-6 border-t border-[var(--color-edge)] pt-5 sm:grid-cols-4">
           <Stat
             label="Theoretical lb"
             value={p.theoreticalPoundsLost.toFixed(2)}

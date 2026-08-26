@@ -13,6 +13,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // Offline-first caching is the right behaviour in production and a
+      // liability while reviewing a local build: the worker keeps serving the
+      // previous bundle, so a change appears not to have taken effect when it
+      // has. VITE_PWA_DISABLE=1 builds without it.
+      disable: process.env.VITE_PWA_DISABLE === '1',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
