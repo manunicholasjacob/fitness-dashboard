@@ -49,6 +49,10 @@ Contrast is checked by measuring the rendered page, not by trusting the palette.
 That distinction matters: the palette claimed 7:1 while light mode's accent,
 warn and danger actually sat at about 5:1 on small text.
 
+Build locally with `VITE_PWA_DISABLE=1` when reviewing changes, or the service
+worker keeps serving the previous bundle and an edit appears not to have taken
+when it has. Production builds keep the worker.
+
 Open the deployed site, unlock it, and paste `docs/contrast-audit.js` into the
 console. It walks every visible text node, resolves colours through a canvas so
 `oklab()` and alpha compositing come out right, and reports any node under its
@@ -90,6 +94,38 @@ stack of identical rectangles.
   letter-spacing that keeps 13px legible is far too loose at 72px.
 - **`.tnum`** for any number that changes, so it does not jitter as it updates.
 
+## Motion
+
+`MOTION_INTENSITY` here is deliberately low. This is a dashboard opened many
+times a day, and a reveal that is charming on a first visit becomes a tax on the
+two hundredth. So `.rise` moves 10px over 460ms, once per mount, using transform
+and opacity only. No blur, no scale, nothing that reads as a page performing for
+you.
+
+The stagger stops at six steps (`.rise-1` to `.rise-6`). Past the visible fold a
+longer delay would outlast the scroll and content would read as missing, so
+everything below rides the last step.
+
+The reduced-motion block zeroes `animation-delay` as well as the duration.
+Without that a staggered entry still holds its `from` state through the delay,
+so content blinks in rather than simply being there.
+
+## What was tried and reverted
+
+Both design skills default to a marketing-page posture. Two of their patterns
+were built, looked at, and removed, because in a data view they read as chrome
+rather than craft:
+
+- **A pill badge around the hero eyebrow.** Against a near-white hero the badge
+  either disappears or has to be darkened until the label outweighs the number
+  it is labelling.
+- **A nested tray around the mission progress bar.** The bar already has its own
+  inset channel; a tray around it is one enclosure too many and at that size
+  reads as a gap rather than as an object.
+
+The nested-enclosure idea was kept where there is a real container to enclose:
+the keypad tray, and the navigation islands.
+
 ## Things that are deliberate
 
 - **No in-app theme switch.** The app follows the system appearance. An
@@ -98,6 +134,10 @@ stack of identical rectangles.
 - **A progress bar at 0.2% draws a visible sliver rather than an empty trough.**
   The exact figure is stated in text beside every bar and in `aria-valuenow`, so
   the rounding is presentational and never the only source of the number.
+- **Navigation floats rather than meeting a viewport edge.** An edge-to-edge bar
+  reads as browser chrome. Detached, with the page scrolling visibly underneath,
+  it reads as part of the app, and on a phone it stops competing with the home
+  indicator for the same strip of glass.
 - **Axis ticks follow the domain the axis actually draws.** A `ReferenceLine`
   does not extend the domain, so it must not influence tick formatting. Letting
   it do so rendered five identical "0k" labels on a new mission.
