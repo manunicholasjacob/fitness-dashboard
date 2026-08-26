@@ -1,0 +1,7 @@
+.env
+.mfp-profile/
+.garmin-tokens/
+__pycache__/
+*.pyc
+.venv/
+venv/

@@ -1,0 +1,20 @@
+{
+  "name": "fitness-dashboard",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Personal energy-deficit mission control dashboard",
+  "scripts": {
+    "dev": "npm run dev --prefix web",
+    "build": "npm run build --prefix web",
+    "preview": "npm run preview --prefix web",
+    "test": "npm run test --prefix web",
+    "typecheck": "npm run typecheck --prefix web",
+    "install:web": "npm install --prefix web",
+    "install:sync": "python -m pip install -r sync/requirements.txt && python -m playwright install chromium",
+    "sync": "python sync/run_sync.py all",
+    "sync:garmin": "python sync/run_sync.py garmin",
+    "sync:mfp": "python sync/run_sync.py mfp",
+    "sync:status": "python sync/run_sync.py status",
+    "sync:login": "python sync/run_sync.py login"
+  }
+}

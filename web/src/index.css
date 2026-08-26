@@ -1,0 +1,186 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens.
+ *
+ * Every colour in the app comes from this file. Nothing is hard-coded in a
+ * component, which is what makes light mode a token swap rather than a rewrite.
+ *
+ * Contrast is not eyeballed. Each foreground token was solved numerically
+ * against the surface it sits on:
+ *   - body and secondary text  >= 7:1
+ *   - small tertiary labels    >= 7:1  (HIG asks for 7:1 on small text)
+ *   - chart axes, placeholders >= 4.6:1
+ *   - non-text graphics        >= 3:1
+ *
+ * Following the platform convention, there is deliberately no in-app theme
+ * switch: the app follows the system appearance. An app-specific appearance
+ * setting means two places to change one preference, and reads as a bug when
+ * the app ignores the system.
+ */
+
+@theme {
+  /* Surfaces, dark by default. Base recedes, elevated advances. */
+  --color-ink: #05070d;
+  --color-surface: #0b0f19;
+  --color-card: #121828;
+  --color-card-raised: #141d33;
+  --color-inset: #0c1018;
+  --color-edge: #1e2740;
+
+  /* Text */
+  --color-text: #e8eefc;
+  --color-soft: #c9d6f0;
+  --color-muted: #95a4c0;
+  --color-faint: #79839b;
+  --color-placeholder: #727d96;
+
+  /* Semantic */
+  --color-accent: #38e07b;
+  --color-accent-dim: #1c7a44;
+  --color-accent-quiet: #0f2a1c;
+  --color-on-accent: #04140a;
+  --color-warn: #f5a524;
+  --color-warn-quiet: #2a1f08;
+  --color-warn-edge: #6b4d12;
+  --color-danger: #f58086;
+  --color-danger-quiet: #2a1012;
+  --color-danger-edge: #6b1f24;
+  --color-info: #8fb0ee;
+  --color-info-edge: #2b3a5c;
+  --color-estimate: #b39ddb;
+  --color-estimate-edge: #4a3d6b;
+
+  /* Charts. Series colours are graphics, so they target 3:1, but axis text
+     is text and targets 4.6:1. */
+  --color-chart-positive: #38e07b;
+  --color-chart-negative: #f2545b;
+  --color-chart-intake: #f5a524;
+  --color-chart-secondary: #8fb0ee;
+  --color-chart-tertiary: #b39ddb;
+  --color-chart-raw: #4d5c7d;
+  --color-chart-grid: #1e2740;
+  --color-chart-axis: #79839b;
+  --color-chart-tooltip-bg: #121828;
+
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* One radius scale, applied consistently: cards 16, controls 12, chips pill. */
+  --radius-card: 1rem;
+  --radius-control: 0.75rem;
+}
+
+/*
+ * Light appearance.
+ *
+ * Not an inversion. Greens and ambers that read well on near-black are far too
+ * bright in light mode, so each was re-solved numerically.
+ *
+ * Solved against #eef1f7 (the page background) rather than #ffffff, because
+ * that is the darkest surface any of these sit on. Solving against white left
+ * the accent, warn and danger tones failing by a tenth of a point on the nav
+ * and on tinted banners.
+ */
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-ink: #eef1f7;
+    --color-surface: #ffffff;
+    --color-card: #ffffff;
+    --color-card-raised: #f8fafd;
+    --color-inset: #f4f6fb;
+    --color-edge: #dde3ee;
+
+    --color-text: #0f1526;
+    --color-soft: #39435c;
+    --color-muted: #485161;
+    --color-faint: #616d84;
+    --color-placeholder: #646d7e;
+
+    --color-accent: #1f7c45;
+    --color-accent-dim: #9ed4b4;
+    --color-accent-quiet: #e6f6ed;
+    --color-on-accent: #ffffff;
+    --color-warn: #926315;
+    --color-warn-quiet: #fdf4e3;
+    --color-warn-edge: #e3c78d;
+    --color-danger: #bd4247;
+    --color-danger-quiet: #fdecec;
+    --color-danger-edge: #eeb1b3;
+    --color-info: #2f5aa8;
+    --color-info-edge: #b9c9e8;
+    --color-estimate: #5b4593;
+    --color-estimate-edge: #cdc0e8;
+
+    --color-chart-positive: #1f7c45;
+    --color-chart-negative: #bd4247;
+    --color-chart-intake: #926315;
+    --color-chart-secondary: #2f5aa8;
+    --color-chart-tertiary: #5b4593;
+    --color-chart-raw: #aab4c8;
+    --color-chart-grid: #e6ebf3;
+    --color-chart-axis: #616d84;
+    --color-chart-tooltip-bg: #ffffff;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  /* Respect the notch and home indicator when installed to the home screen. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  overscroll-behavior-y: none;
+}
+
+/* Tabular figures stop large changing numbers from jittering as they update. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Motion is supplementary here: nothing in this app communicates state through
+ * animation alone, so removing it costs no information.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * Translucent bars fall back to solid fills. The blurred nav is decoration;
+ * legibility is not.
+ */
+@media (prefers-reduced-transparency: reduce) {
+  .material {
+    backdrop-filter: none !important;
+    background: var(--color-surface) !important;
+  }
+}
+
+/* Visible keyboard focus on every interactive element, not just the ones that
+   happen to inherit a browser default. */
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+  border-radius: 0.5rem;
+}
+
+/* Chrome and Safari render dark date/time pickers only when told to. */
+input[type='date'],
+input[type='time'] {
+  color-scheme: light dark;
+}

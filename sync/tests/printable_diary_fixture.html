@@ -1,0 +1,40 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>MFP printable diary fixture</title></head>
+<body>
+<!-- Mirrors the shape of MyFitnessPal's printable diary: per-meal tables with
+     their own Totals row, then a day-total table at the end. The extractor
+     must pick the LAST totals row of the LAST qualifying table. -->
+<h1>Manu's Food Diary</h1>
+<h2>August 24, 2026</h2>
+
+<table>
+  <thead>
+    <tr><td>Breakfast</td><td>Calories</td><td>Carbs (g)</td><td>Fat (g)</td><td>Protein (g)</td><td>Sodium (mg)</td><td>Sugar (g)</td></tr>
+  </thead>
+  <tbody>
+    <tr><td>Oatmeal, 1 cup</td><td>320</td><td>54</td><td>6</td><td>11</td><td>190</td><td>2</td></tr>
+    <tr><td>Blueberries, 100 g</td><td>57</td><td>14</td><td>0</td><td>1</td><td>1</td><td>10</td></tr>
+    <tr class="total"><td>Totals</td><td>377</td><td>68</td><td>6</td><td>12</td><td>191</td><td>12</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr><td>Dinner</td><td>Calories</td><td>Carbs (g)</td><td>Fat (g)</td><td>Protein (g)</td><td>Sodium (mg)</td><td>Sugar (g)</td></tr>
+  </thead>
+  <tbody>
+    <tr><td>Chicken thigh, 200 g</td><td>418</td><td>0</td><td>26</td><td>44</td><td>178</td><td>0</td></tr>
+    <tr class="total"><td>Totals</td><td>418</td><td>0</td><td>26</td><td>44</td><td>178</td><td>0</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <thead>
+    <tr><td>Totals for August 24, 2026</td><td>Calories</td><td>Carbs (g)</td><td>Fat (g)</td><td>Protein (g)</td><td>Sodium (mg)</td><td>Sugar (g)</td></tr>
+  </thead>
+  <tbody>
+    <tr class="total"><td>Total</td><td>1,847</td><td>186</td><td>63</td><td>141</td><td>2,340</td><td>47</td></tr>
+    <tr><td>Goal</td><td>2,000</td><td>200</td><td>67</td><td>150</td><td>2,300</td><td>50</td></tr>
+  </tbody>
+</table>
+</body></html>

@@ -1,0 +1,9 @@
+# Garmin Connect. Unofficial: it performs the same mobile SSO login the
+# official app uses. Garmin grants no personal API access, so this is the only
+# route available to an individual.
+garminconnect>=0.2.19
+
+# Drives a real Chromium with a persistent profile to read the MyFitnessPal
+# printable diary. After `pip install`, also run:
+#   python -m playwright install chromium
+playwright>=1.47.0
