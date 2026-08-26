@@ -250,7 +250,7 @@ export function Button({
 }) {
   const styles = {
     primary:
-      'bg-[var(--color-accent)] text-[var(--color-on-accent)] shadow-[var(--shadow-raised)] ' +
+      'bg-[var(--color-accent-fill)] text-[var(--color-on-accent)] shadow-[var(--shadow-raised)] ' +
       'hover:brightness-110 active:brightness-95 active:shadow-none',
     ghost:
       'border border-[var(--color-edge)] bg-[var(--color-card)] text-[var(--color-text)] ' +

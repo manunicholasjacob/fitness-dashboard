@@ -77,7 +77,7 @@ export function Analytics() {
             onClick={() => setWindow(n)}
             className={`min-h-9 rounded-lg px-3 text-xs font-semibold transition ${
               window === n
-                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
+                ? 'bg-[var(--color-accent-fill)] text-[var(--color-on-accent)]'
                 : 'border border-[var(--color-edge)] text-[var(--color-muted)] hover:text-[var(--color-text)]'
             }`}
           >

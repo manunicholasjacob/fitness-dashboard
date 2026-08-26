@@ -112,6 +112,16 @@
    * In dark mode the base already clears 7:1, so the two are the same and this
    * block exists only to keep the names available.
    */
+  /*
+   * The fill behind on-accent text.
+   *
+   * A colour that reads well as a 72px figure is not necessarily dark enough to
+   * carry white text at 14px, and the button label is the reading that has to
+   * survive. In dark mode the fill is the bright accent with near-black text on
+   * it, which already clears 7:1, so the two are the same here.
+   */
+  --color-accent-fill: #38e07b;
+
   --color-accent-text: #38e07b;
   --color-warn-text: #f5a524;
   --color-danger-text: #f58086;
@@ -196,6 +206,10 @@
     /* Solved to 7:1 against the page, the darkest ground these sit on. The
        vivid base tones above stay for display figures and graphics, which are
        large enough that the large-text threshold is the right one. */
+    /* Solved so white clears 7:1 on it: the vivid accent gave only 5.21:1,
+       which is fine for a headline figure and not for a button label. */
+    --color-accent-fill: #196538;
+
     --color-accent-text: #165932;
     --color-warn-text: #69470f;
     --color-danger-text: #883033;

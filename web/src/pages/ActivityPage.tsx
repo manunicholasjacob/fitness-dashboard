@@ -50,7 +50,7 @@ export function ActivityPage() {
             onClick={() => setRange(key)}
             className={`min-h-9 rounded-lg px-3 text-xs font-semibold transition ${
               range === key
-                ? 'bg-[var(--color-accent)] text-[var(--color-on-accent)]'
+                ? 'bg-[var(--color-accent-fill)] text-[var(--color-on-accent)]'
                 : 'border border-[var(--color-edge)] text-[var(--color-muted)] hover:text-[var(--color-text)]'
             }`}
           >
