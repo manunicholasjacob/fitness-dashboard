@@ -1,0 +1,82 @@
+name: Sync
+
+# Four times a day, and on demand.
+#
+# This runs in the cloud rather than on the laptop. That became possible once
+# both providers were plain HTTP: Garmin through its own SSO, MyFitnessPal
+# through diary sharing. Neither needs a browser any more, so neither needs a
+# machine that happens to be awake.
+#
+# Times are UTC. These correspond to 10:00, 14:00, 18:00 and 21:00 US Central
+# during daylight saving. GitHub does not do local time, so the wall-clock times
+# shift by an hour in winter; the three-day backfill window makes that
+# immaterial.
+on:
+  schedule:
+    - cron: '0 15 * * *'   # 10:00 CDT
+    - cron: '0 19 * * *'   # 14:00 CDT
+    - cron: '0 23 * * *'   # 18:00 CDT
+    - cron: '0 2 * * *'    # 21:00 CDT (next UTC day)
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'How many days back to sync'
+        required: false
+        default: '3'
+
+# Never let two syncs overlap. A slow run plus a scheduled one would fetch the
+# same days twice and race each other's upserts.
+concurrency:
+  group: sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: sync/requirements.txt
+
+      - name: Install
+        # Only the Garmin client is needed. Playwright is in requirements for
+        # local use, but nothing in the sync path drives a browser any more.
+        run: pip install 'garminconnect>=0.2.19'
+
+      # Garmin rate-limits logins aggressively and does so per account, so the
+      # session token is carried between runs rather than signing in four times
+      # a day. The key rotates daily to bound how long a stale token lingers.
+      - name: Restore Garmin session
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/state/fitness-dashboard-sync/garmin-tokens
+          key: garmin-tokens-${{ github.run_id }}
+          restore-keys: garmin-tokens-
+
+      - name: Sync
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          APP_EMAIL: ${{ secrets.APP_EMAIL }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+          GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
+          GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          MFP_USERNAME: ${{ secrets.MFP_USERNAME }}
+          MFP_DIARY_KEY: ${{ secrets.MFP_DIARY_KEY }}
+          TIMEZONE: America/Chicago
+          BACKFILL_DAYS: ${{ github.event.inputs.days || '3' }}
+        run: python sync/run_sync.py all
+
+      - name: Report
+        if: always()
+        env:
+          SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          APP_EMAIL: ${{ secrets.APP_EMAIL }}
+          APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
+        run: python sync/run_sync.py status

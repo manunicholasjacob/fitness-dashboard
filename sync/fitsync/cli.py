@@ -21,6 +21,7 @@ from datetime import date, datetime, time, timedelta
 
 from .config import BROWSER_PROFILE, ConfigError, load_config
 from .doctor import run_doctor
+from .lock import AlreadyRunning, single_instance
 from .garmin import GarminAdapter, GarminError, date_range
 from .mfp import MfpAdapter, MfpError
 from .mfp_http import MfpHttpAdapter, MfpHttpError
@@ -232,13 +233,21 @@ def main(argv: list[str] | None = None) -> int:
     started = datetime.now()
     total = 0
     failures: list[str] = []
-    if args.command in ("all", "garmin"):
-        written = sync_garmin(store, config, days)
-        total += written
-        if config.garmin_email and written == 0:
-            failures.append("garmin")
-    if args.command in ("all", "mfp"):
-        total += sync_mfp(store, config, days)
+
+    try:
+        with single_instance():
+            if args.command in ("all", "garmin"):
+                written = sync_garmin(store, config, days)
+                total += written
+                if config.garmin_email and written == 0:
+                    failures.append("garmin")
+            if args.command in ("all", "mfp"):
+                total += sync_mfp(store, config, days)
+    except AlreadyRunning as exc:
+        # A catch-up run landing on top of a scheduled one is expected, not a
+        # fault: the other run is doing the work.
+        log.info("%s Skipping.", exc)
+        return 0
 
     elapsed = (datetime.now() - started).total_seconds()
     log.info("Wrote %d records in %.1fs", total, elapsed)
