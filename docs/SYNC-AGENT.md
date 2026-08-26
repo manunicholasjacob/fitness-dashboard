@@ -120,25 +120,63 @@ Or set `HEADLESS=0` in `sync/.env` to watch the browser drive MyFitnessPal, whic
 
 ## Scheduling
 
-### Windows
+**Four times a day, in the cloud.** The `Sync` GitHub Actions workflow runs at
+10:00, 14:00, 18:00 and 21:00 US Central, and can be run on demand from the
+Actions tab with a custom backfill window.
+
+It runs in the cloud rather than on the laptop because it can: both providers
+are plain HTTP now, so nothing needs a browser and nothing needs a machine that
+happens to be awake. Runs are also visible and re-runnable, which a local task
+is not.
+
+Three things make the schedule safe to run this often:
+
+- **A concurrency group.** A slow run and a scheduled one cannot overlap and
+  race each other's upserts.
+- **A cached Garmin session.** Garmin rate-limits logins aggressively and does
+  so per account, so the token is carried between runs rather than signing in
+  four times a day.
+- **A single-instance lock in the agent.** Belt and braces, and it also covers
+  the local path where a catch-up run can land on top of a scheduled one.
+
+Every run re-fetches the last three days rather than only today, so a missed
+window heals itself and late entries are picked up.
+
+### A caveat about Garmin and cloud IPs
+
+Garmin rate-limits by IP, and GitHub's runners use shared addresses. Login
+attempts from them do get 429s. The client falls back through several
+authentication strategies and has succeeded so far, and the cached token means
+most runs never sign in at all, but this is the part of the setup most likely
+to need attention one day. If it starts failing consistently, re-enable the
+local task described below and the syncing moves back to a residential IP.
+
+### The local task, kept as a fallback
+
+A Windows scheduled task named `Fitness Dashboard Sync` exists with the same
+four triggers, and is **disabled**. Running both would double Garmin's request
+volume for no benefit.
 
 ```powershell
-schtasks /create /tn "Fitness Dashboard Sync" ^
-  /tr "C:\path\to\fitness-dashboard\sync\run_daily.cmd" ^
-  /sc daily /st 21:00 /f
+Enable-ScheduledTask  -TaskName "Fitness Dashboard Sync"   # fall back to local
+Disable-ScheduledTask -TaskName "Fitness Dashboard Sync"   # back to cloud only
 ```
 
-Evening works better than morning: your food log is complete by then, whereas at 7am the previous day may still be missing dinner. The three-day backfill window means the morning's Garmin data still arrives the following evening.
+It is configured to catch up a run missed while the machine was asleep, rather
+than skipping it, and never wakes the machine itself.
 
-Check it ran: `schtasks /query /tn "Fitness Sync"`
+> Worth knowing if you rely on it: a scheduled task reporting `Last Result: 0`
+> is not proof it ran. During setup the task returned 0 while never executing
+> its action at all. Check the log at
+> `%LOCALAPPDATA%\fitness-dashboard-sync\sync.log` for a timestamped entry, not
+> the exit code.
 
-### macOS or Linux
+Any run can also be forced by hand:
 
-```cron
-0 21 * * * cd /path/to/fitness-dashboard && /usr/bin/python sync/run_sync.py all >> /tmp/fitness-sync.log 2>&1
+```bash
+npm run sync              # last 3 days
+python sync/run_sync.py all --days 14
 ```
-
----
 
 ## Failure behaviour
 

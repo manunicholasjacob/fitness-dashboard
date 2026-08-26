@@ -113,7 +113,7 @@ There is no OAuth path. Rather than ship adapter scaffolding for APIs that will 
 - **Garmin** signs in through the `garminconnect` library, which uses the same mobile SSO flow the official Garmin app does, and caches tokens locally. It pulls calories, steps, intraday step buckets, distance, heart rate, sleep stages, stress, body battery, SpO2, and every activity.
 - **MyFitnessPal** is read through its own diary-sharing feature, over plain HTTP with no browser and no login. Its login form sits behind a Cloudflare bot check that rejects automated browsers regardless of who types the password, and that is not something this project tries to defeat. Setting the diary to "Locked with a Key" exposes a JSON endpoint the agent reads directly: structured figures, one request per date range, nothing that expires.
 
-Both run daily. See **[docs/SYNC-AGENT.md](docs/SYNC-AGENT.md)**.
+Both run **four times a day** (10:00, 14:00, 18:00 and 21:00 Central) as a GitHub Actions cron, not on the laptop. Each run re-fetches the last three days, so a missed window heals itself. See **[docs/SYNC-AGENT.md](docs/SYNC-AGENT.md)**.
 
 ```bash
 npm run install:sync   # python dependencies
