@@ -37,6 +37,17 @@ def _num(value: Any) -> float | None:
     return n if n == n else None  # filter NaN
 
 
+def _int(value: Any) -> int | None:
+    """Coerce to int for columns Postgres declares as integer.
+
+    Garmin returns step counts as floats. Postgres rejects "4443.0" for an
+    integer column outright, so the rounding has to happen here rather than
+    being left to the database.
+    """
+    n = _num(value)
+    return None if n is None else int(round(n))
+
+
 def _first(payload: dict[str, Any] | None, *keys: str) -> Any:
     """Return the first present, non-null key. Garmin renames fields often."""
     if not payload:
@@ -181,7 +192,7 @@ class GarminAdapter:
             "raw_garmin_resting_calories": _num(
                 _first(stats, "bmrKilocalories", "restingCalories")
             ),
-            "steps_total": _num(_first(stats, "totalSteps", "steps")),
+            "steps_total": _int(_first(stats, "totalSteps", "steps")),
             "steps_before_deadline": self.steps_before(day, deadline),
             "distance_meters": _num(_first(stats, "totalDistanceMeters", "distance")),
             "active_minutes": _num(
