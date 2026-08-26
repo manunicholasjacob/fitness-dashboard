@@ -142,6 +142,12 @@ export interface Settings {
   // 170 lb + 87 cm baseline is a completely normal way to actually measure.
   units: UnitSystem
   lengthUnits: UnitSystem
+
+  /**
+   * SHA-256 of the device unlock code, or null for no lock screen.
+   * A convenience lock only: real access control is Supabase Auth plus RLS.
+   */
+  unlockPinHash: string | null
   startingWaistCm: number
   startingNeckCm: number
 }

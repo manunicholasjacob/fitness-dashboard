@@ -40,6 +40,7 @@ export const settingsSchema = z.object({
 
   units: z.enum(['imperial', 'metric']),
   lengthUnits: z.enum(['imperial', 'metric']),
+  unlockPinHash: z.string().nullable(),
   startingWaistCm: z.number().positive().max(300),
   startingNeckCm: z.number().positive().max(100),
 })
@@ -79,6 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
   units: 'imperial',
   lengthUnits: 'metric',
+  unlockPinHash: null,
   startingWaistCm: 87,
   startingNeckCm: 40,
 }

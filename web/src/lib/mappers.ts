@@ -159,6 +159,7 @@ export function toSettings(row: Record<string, unknown> | null): Settings {
     fiberTarget: num(row.fiber_target),
     units: (str(row.units) as Settings['units']) ?? 'imperial',
     lengthUnits: (str(row.length_units) as Settings['units']) ?? 'metric',
+    unlockPinHash: str(row.unlock_pin_hash),
     startingWaistCm: num(row.starting_waist_cm) ?? 87,
     startingNeckCm: num(row.starting_neck_cm) ?? 40,
   }
@@ -189,6 +190,7 @@ export function fromSettings(s: Settings) {
     fiber_target: s.fiberTarget,
     units: s.units,
     length_units: s.lengthUnits,
+    unlock_pin_hash: s.unlockPinHash,
     starting_waist_cm: s.startingWaistCm,
     starting_neck_cm: s.startingNeckCm,
   }

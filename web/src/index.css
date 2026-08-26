@@ -140,6 +140,14 @@ body {
   overscroll-behavior-y: none;
 }
 
+/* A wrong unlock code shakes the dots. Purely supplementary: the error is also
+   stated in text and announced to assistive tech. */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-7px); }
+  40%, 80% { transform: translateX(7px); }
+}
+
 /* Tabular figures stop large changing numbers from jittering as they update. */
 .tnum {
   font-variant-numeric: tabular-nums;
