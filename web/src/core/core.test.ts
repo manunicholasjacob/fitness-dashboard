@@ -34,6 +34,7 @@ function day(date: string, garmin: number | null, mfp: number | null, extra: Par
     averageHr: null, restingHr: null, maxHr: null,
     sleepSeconds: null, sleepDeepSeconds: null, sleepRemSeconds: null, sleepScore: null,
     stressAvg: null, bodyBatteryHigh: null, bodyBatteryLow: null, spo2Avg: null, respirationAvg: null,
+    garminDataThrough: null,
     energySource: garmin === null ? null : 'garmin',
     nutritionSource: mfp === null ? null : 'mfp',
     isDemo: false,

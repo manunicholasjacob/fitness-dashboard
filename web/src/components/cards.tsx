@@ -363,6 +363,40 @@ export function NutritionCard() {
 
 // --- Activity ---------------------------------------------------------------
 
+/**
+ * How stale the Garmin figures are, in plain words.
+ *
+ * This exists because Garmin's servers only hold what the watch has uploaded.
+ * The phone app reads the watch live over Bluetooth, so it is routinely ahead,
+ * and a dashboard that quietly shows the older number looks broken when it is
+ * working exactly as intended. Saying which moment the data describes removes
+ * the ambiguity.
+ */
+function GarminFreshness({ through }: { through: string | null }) {
+  if (!through) return null
+  const t = Date.parse(through)
+  if (!Number.isFinite(t)) return null
+
+  const minutes = Math.floor((Date.now() - t) / 60_000)
+  if (minutes < 0) return null
+
+  const clock = new Date(t).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  const stale = minutes >= 90
+
+  return (
+    <p className={`mt-3 text-xs ${stale ? 'text-[var(--color-warn)]' : 'text-[var(--color-muted)]'}`}>
+      Garmin data runs through {clock}
+      {stale && (
+        <>
+          {' '}&middot; your watch has not uploaded in{' '}
+          {minutes >= 120 ? `${Math.floor(minutes / 60)} hours` : `${minutes} minutes`}. Open
+          Garmin Connect on your phone to push it.
+        </>
+      )}
+    </p>
+  )
+}
+
 export function TodayActivityCard() {
   const { settings } = useData()
   const today = useToday()
@@ -396,6 +430,7 @@ export function TodayActivityCard() {
           />
         </div>
       )}
+      {r && <GarminFreshness through={r.garminDataThrough} />}
     </Card>
   )
 }

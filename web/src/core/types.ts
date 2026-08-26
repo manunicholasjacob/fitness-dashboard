@@ -54,6 +54,12 @@ export interface DailyRecord {
   spo2Avg: number | null
   respirationAvg: number | null
 
+  /**
+   * How current the Garmin figures are. Garmin only holds what the watch has
+   * uploaded, so this can trail the phone app by hours.
+   */
+  garminDataThrough: string | null
+
   energySource: DataSource | null
   nutritionSource: DataSource | null
   isDemo: boolean

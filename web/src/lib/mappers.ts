@@ -51,6 +51,7 @@ export function toDailyRecord(row: Record<string, unknown>): DailyRecord {
     bodyBatteryLow: num(row.body_battery_low),
     spo2Avg: num(row.spo2_avg),
     respirationAvg: num(row.respiration_avg),
+    garminDataThrough: str(row.garmin_data_through),
     energySource: (str(row.energy_source) as DataSource | null) ?? null,
     nutritionSource: (str(row.nutrition_source) as DataSource | null) ?? null,
     isDemo: Boolean(row.is_demo),

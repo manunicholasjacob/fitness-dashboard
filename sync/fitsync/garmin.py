@@ -48,6 +48,16 @@ def _int(value: Any) -> int | None:
     return None if n is None else int(round(n))
 
 
+def _timestamp(value: Any) -> str | None:
+    """Normalise a Garmin GMT timestamp string to ISO 8601 with a zone."""
+    if not value:
+        return None
+    text = str(value).strip().replace(" ", "T")
+    if not text:
+        return None
+    return text if text.endswith("Z") or "+" in text[10:] else text + "Z"
+
+
 def _first(payload: dict[str, Any] | None, *keys: str) -> Any:
     """Return the first present, non-null key. Garmin renames fields often."""
     if not payload:
@@ -214,6 +224,11 @@ class GarminAdapter:
             "body_battery_low": _num(_first(stats, "bodyBatteryLowestValue")),
             "spo2_avg": _num(_first(stats, "averageSpo2", "avgSpo2")),
             "respiration_avg": _num(_first(stats, "avgWakingRespirationValue")),
+            # How current this actually is. Garmin only holds what the watch
+            # has uploaded, so the figures can lag the phone app by hours.
+            "garmin_data_through": _timestamp(
+                _first(stats, "wellnessEndTimeGmt", "lastSyncTimestampGMT")
+            ),
             "energy_source": "garmin",
         }
 
