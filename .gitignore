@@ -14,3 +14,8 @@ sync/.garmin-tokens/
 .claude/skills/
 web/.env.local
 .wrangler/
+
+# Local-only Cloudflare Pages Function secrets for `wrangler pages dev`.
+# Never committed: these are the same values held as Cloudflare secrets in production.
+.dev.vars
+web/.dev.vars

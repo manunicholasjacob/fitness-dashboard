@@ -45,7 +45,39 @@ const asNumber = (v: unknown): number => {
 const asLabel = (v: unknown): string => shortDate(String(v ?? ''))
 
 function axisProps(t: ChartTheme) {
-  return { stroke: t.axis, fontSize: 11, tickLine: false, axisLine: false } as const
+  return {
+    stroke: t.axis,
+    fontSize: 11,
+    tickLine: false,
+    axisLine: false,
+    // Tabular figures keep axis labels from shifting as the domain changes.
+    style: { fontVariantNumeric: 'tabular-nums' },
+  } as const
+}
+
+/**
+ * An axis label that survives a small domain.
+ *
+ * Formatting everything as thousands renders "0k 0k 0k 0k" whenever the range
+ * is under a thousand, which is exactly where a new mission starts: four
+ * identical labels claiming the axis has no scale. Below 2,000 the axis shows
+ * real numbers, and only compacts once compaction is telling the truth.
+ */
+function compactTick(v: number, domainSpan: number): string {
+  if (domainSpan >= 2000) return `${Math.round(v / 1000)}k`
+  return Math.round(v).toLocaleString('en-US')
+}
+
+/** The span a numeric series covers, used to choose the tick format. */
+function spanOf(values: number[]): number {
+  if (values.length === 0) return 0
+  let lo = values[0]
+  let hi = values[0]
+  for (const v of values) {
+    if (v < lo) lo = v
+    if (v > hi) hi = v
+  }
+  return Math.abs(hi - lo)
 }
 function gridProps(t: ChartTheme) {
   return { stroke: t.grid, strokeDasharray: '3 3', vertical: false } as const
@@ -104,13 +136,16 @@ export function CumulativeChart({
   const t = useChartTheme()
   const latest = data.length ? data[data.length - 1].cumulative : 0
   const pct = target > 0 ? (latest / target) * 100 : 0
+  // Only the data: a ReferenceLine does not extend the axis domain, so the
+  // target must not influence how the ticks are formatted.
+  const span = spanOf([...data.map((d) => d.cumulative), 0])
   const summary =
     `Cumulative adjusted deficit across ${data.length} days, now ${int(latest)} kcal, ` +
     `${pct.toFixed(1)}% of the ${int(target)} kcal target.`
 
   return (
     <ChartFrame height={height} summary={summary}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <defs>
           <linearGradient id="cumFill" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={t.positive} stopOpacity={0.45} />
@@ -119,7 +154,7 @@ export function CumulativeChart({
         </defs>
         <CartesianGrid {...gridProps(t)} />
         <XAxis dataKey="date" tickFormatter={shortDate} {...axisProps(t)} minTickGap={28} />
-        <YAxis tickFormatter={(v) => `${Math.round(v / 1000)}k`} {...axisProps(t)} width={44} />
+        <YAxis tickFormatter={(v) => compactTick(v, span)} {...axisProps(t)} width={48} />
         <Tooltip
           {...tooltipProps(t)}
           formatter={(v: unknown) => [`${int(asNumber(v))} kcal`, 'Cumulative'] as [string, string]}
@@ -155,10 +190,10 @@ export function DailyBalanceChart({
 
   return (
     <ChartFrame height={height} summary={summary}>
-      <BarChart data={plotted} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+      <BarChart data={plotted} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid {...gridProps(t)} />
         <XAxis dataKey="date" tickFormatter={shortDate} {...axisProps(t)} minTickGap={28} />
-        <YAxis {...axisProps(t)} width={44} />
+        <YAxis {...axisProps(t)} width={48} />
         <Tooltip
           {...tooltipProps(t)}
           cursor={{ fill: `${t.grid}66` }}
@@ -199,10 +234,10 @@ export function IntakeVsBurnChart({
 
   return (
     <ChartFrame height={height} summary={summary}>
-      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid {...gridProps(t)} />
         <XAxis dataKey="date" tickFormatter={shortDate} {...axisProps(t)} minTickGap={28} />
-        <YAxis {...axisProps(t)} width={44} />
+        <YAxis {...axisProps(t)} width={48} />
         <Tooltip {...tooltipProps(t)} labelFormatter={asLabel} formatter={(v: unknown) => `${int(asNumber(v))} kcal`} />
         <Line type="monotone" dataKey="expenditure" name="Expenditure" stroke={t.positive} strokeWidth={2} dot={false} connectNulls />
         <Line type="monotone" dataKey="intake" name="Intake" stroke={t.intake} strokeWidth={2} dot={false} connectNulls />
@@ -225,6 +260,7 @@ export function WeightChart({
 }) {
   const t = useChartTheme()
   const withAvg = data.filter((d) => d.average !== null)
+  const weightSpan = spanOf(data.flatMap((d) => [d.value, d.average ?? d.value]))
   const first = withAvg.length ? withAvg[0].average! : null
   const last = withAvg.length ? withAvg[withAvg.length - 1].average! : null
   const delta = first !== null && last !== null ? last - first : null
@@ -236,10 +272,18 @@ export function WeightChart({
 
   return (
     <ChartFrame height={height} summary={summary}>
-      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid {...gridProps(t)} />
         <XAxis dataKey="date" tickFormatter={shortDate} {...axisProps(t)} minTickGap={28} />
-        <YAxis domain={['dataMin - 1', 'dataMax + 1']} tickFormatter={(v) => v.toFixed(0)} {...axisProps(t)} width={40} />
+        {/* A two-pound range at zero decimals renders "171 171 170 170": four
+            ticks, two distinct values. Below a 6 lb span the axis keeps one
+            decimal so consecutive ticks stay distinguishable. */}
+        <YAxis
+          domain={['dataMin - 1', 'dataMax + 1']}
+          tickFormatter={(v) => v.toFixed(weightSpan < 6 ? 1 : 0)}
+          {...axisProps(t)}
+          width={weightSpan < 6 ? 52 : 48}
+        />
         <Tooltip
           {...tooltipProps(t)}
           labelFormatter={asLabel}
@@ -294,14 +338,14 @@ export function SimpleLineChart({
 
   return (
     <ChartFrame height={height} summary={summary ?? auto}>
-      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid {...gridProps(t)} />
         <XAxis dataKey="date" tickFormatter={shortDate} {...axisProps(t)} minTickGap={28} />
         <YAxis
           domain={[`dataMin - ${domainPad}`, `dataMax + ${domainPad}`]}
           tickFormatter={(v) => (Math.abs(v) >= 1000 ? `${Math.round(v / 1000)}k` : v.toFixed(0))}
           {...axisProps(t)}
-          width={44}
+          width={48}
         />
         <Tooltip
           {...tooltipProps(t)}
@@ -327,16 +371,17 @@ export function StepsChart({
   const t = useChartTheme()
   const met = data.filter((d) => (d.morning ?? 0) >= goal).length
   const scored = data.filter((d) => d.morning !== null).length
+  const stepSpan = spanOf([...data.map((d) => d.total ?? 0), 0])
   const summary =
     `Daily steps over ${data.length} days, split into steps before the morning deadline and the rest ` +
     `of the day. The goal of ${int(goal)} was met on ${met} of ${scored} days with data.`
 
   return (
     <ChartFrame height={height} summary={summary}>
-      <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: -12 }}>
+      <BarChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
         <CartesianGrid {...gridProps(t)} />
         <XAxis dataKey="date" tickFormatter={shortDate} {...axisProps(t)} minTickGap={28} />
-        <YAxis tickFormatter={(v) => `${Math.round(v / 1000)}k`} {...axisProps(t)} width={40} />
+        <YAxis tickFormatter={(v) => compactTick(v, stepSpan)} {...axisProps(t)} width={48} />
         <Tooltip
           {...tooltipProps(t)}
           cursor={{ fill: `${t.grid}66` }}

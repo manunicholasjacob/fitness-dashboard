@@ -58,7 +58,7 @@ export function QuickCalories() {
 
   return (
     <form onSubmit={submit} className="mt-4 rounded-[var(--radius-control)] border border-[var(--color-warn-edge)] bg-[var(--color-warn-quiet)] p-3">
-      <label htmlFor="quick-calories" className="text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--color-warn)]">
+      <label htmlFor="quick-calories" className="eyebrow text-[var(--color-warn)]">
         Log today's calories
       </label>
       <div className="mt-2 flex gap-2">

@@ -41,24 +41,36 @@ export function Dashboard() {
   if (loading) return <DashboardSkeleton />
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <MissionCard />
 
-      {/* The three numbers that answer "how am I doing" without scrolling. */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <TodayEnergyCard />
-        <MorningMissionCard />
-        <WeightCard />
+      {/*
+       * The numbers that answer "how am I doing" without scrolling.
+       *
+       * Deliberately not three equal columns. Today's energy is the day's
+       * headline and carries the full raw-to-adjusted chain for both providers,
+       * so it takes the wider half; the morning mission and weight are single
+       * figures and stack beside it. Equal thirds would give three unequal
+       * things the same emphasis and leave the eye with nowhere to land.
+       */}
+      <div className="grid items-stretch gap-5 lg:grid-cols-12">
+        <div className="lg:col-span-7">
+          <TodayEnergyCard />
+        </div>
+        <div className="grid gap-5 lg:col-span-5">
+          <MorningMissionCard />
+          <WeightCard />
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <NutritionCard />
         <TodayActivityCard />
       </div>
 
       <PeriodDeficitCard />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <Card title="Cumulative Deficit Trend">
           {cumulative.length > 1 ? (
             <Suspense fallback={<ChartSkeleton />}>
@@ -88,7 +100,7 @@ export function Dashboard() {
 
       {insights.length > 0 && (
         <Card title="Insights" subtitle="Computed from your data, nothing invented">
-          <ul className="space-y-2">
+          <ul className="space-y-2.5">
             {insights.map((i) => (
               <li key={i.id} className="flex gap-2.5 text-sm">
                 <span
@@ -124,16 +136,21 @@ export function Dashboard() {
  * paints immediately on any device that has opened the app before.
  */
 function DashboardSkeleton() {
-  const block = 'animate-pulse rounded-[var(--radius-card)] border border-[var(--color-edge)] bg-[var(--color-card)]'
+  const block =
+    'animate-pulse rounded-[var(--radius-card)] border border-[var(--color-edge)] ' +
+    'bg-[var(--color-card)] shadow-[var(--shadow-raised)]'
+  // Shaped like the real layout, asymmetry included, so nothing shifts on load.
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Loading your mission">
-      <div className={`${block} h-56`} />
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className={`${block} h-64`} />
-        <div className={`${block} h-64`} />
-        <div className={`${block} h-64`} />
+    <div className="space-y-5" aria-busy="true" aria-label="Loading your mission">
+      <div className={`${block} h-64 rounded-[var(--radius-hero)]`} />
+      <div className="grid gap-5 lg:grid-cols-12">
+        <div className={`${block} h-72 lg:col-span-7`} />
+        <div className="grid gap-5 lg:col-span-5">
+          <div className={`${block} h-[8.5rem]`} />
+          <div className={`${block} h-[8.5rem]`} />
+        </div>
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-5 lg:grid-cols-2">
         <div className={`${block} h-72`} />
         <div className={`${block} h-72`} />
       </div>

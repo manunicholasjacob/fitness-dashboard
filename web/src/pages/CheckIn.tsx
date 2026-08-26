@@ -383,7 +383,7 @@ function RecentEntries() {
       <div className="-mx-2 overflow-x-auto">
         <table className="w-full min-w-[420px] text-sm">
           <thead>
-            <tr className="text-left text-[11px] uppercase tracking-[0.12em] text-[var(--color-muted)]">
+            <tr className="eyebrow text-left text-[var(--color-muted)]">
               <th className="px-2 pb-2 font-semibold">Date</th>
               <th className="px-2 pb-2 text-right font-semibold">Weight ({weightUnit})</th>
               <th className="px-2 pb-2 text-right font-semibold">Waist ({lengthUnit})</th>

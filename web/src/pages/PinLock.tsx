@@ -94,7 +94,7 @@ export function PinLock({
       <h1 className="text-center text-xl font-bold tracking-[0.24em] text-[var(--color-accent)]">
         MANU FITNESS
       </h1>
-      <p className="mt-2 text-center text-[11px] uppercase tracking-[0.18em] text-[var(--color-muted)]">
+      <p className="mt-2.5 text-center text-sm text-[var(--color-muted)]">
         {busy ? 'Checking' : 'Enter your code'}
       </p>
 

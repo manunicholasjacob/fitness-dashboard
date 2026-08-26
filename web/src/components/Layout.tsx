@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useData } from '../lib/data'
 import { useAuth } from '../lib/auth'
+import { pluralize } from '../core/units'
 
 const NAV = [
   { to: '/', label: 'Dashboard', short: 'Home', icon: 'M3 11l9-8 9 8v9a2 2 0 0 1-2 2h-4v-6H9v6H5a2 2 0 0 1-2-2z' },
@@ -41,7 +42,7 @@ function StaleBanner() {
   const warnings: string[] = []
   for (const [provider, label] of [['garmin', 'Garmin'], ['mfp', 'MyFitnessPal']] as const) {
     const since = daysSince(lastSuccess(provider))
-    if (since !== null && since >= 2) warnings.push(`${label} has not synced in ${since} days.`)
+    if (since !== null && since >= 2) warnings.push(`${label} has not synced in ${pluralize(since, 'day')}.`)
   }
 
   // Only nag about a missing log once there is data to be missing from.
@@ -115,9 +116,16 @@ export function Layout() {
       <StaleBanner />
 
       {/* Desktop / tablet navigation */}
-      <header className="sticky top-0 z-20 hidden border-b border-[var(--color-edge)] material bg-[var(--color-ink)]/90 backdrop-blur md:block">
-        <div className="mx-auto flex max-w-6xl items-center gap-1 px-6 py-3">
-          <span className="mr-4 text-sm font-bold tracking-[0.16em] text-[var(--color-accent)]">
+      <header className="sticky top-0 z-20 hidden border-b border-[var(--color-edge)] material
+        bg-[var(--color-ink)]/80 backdrop-blur-xl md:block">
+        <div className="mx-auto flex max-w-6xl items-center gap-1 px-6 py-2.5">
+          <span className="mr-5 flex items-center gap-2 text-sm font-bold tracking-[0.16em]
+            text-[var(--color-accent)]">
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 rounded-full bg-[var(--color-accent)]
+                shadow-[0_0_0_3px_var(--color-accent-quiet)]"
+            />
             MISSION
           </span>
           {[...NAV, ...MORE].map((item) => (
@@ -126,11 +134,14 @@ export function Layout() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `rounded-lg px-3 py-2 text-sm font-medium transition ${
-                  isActive
-                    ? 'bg-white/10 text-[var(--color-text)]'
-                    : 'text-[var(--color-muted)] hover:text-[var(--color-text)]'
-                }`
+                `rounded-[var(--radius-inner)] px-3 py-1.5 text-sm transition duration-200
+                 ease-[cubic-bezier(0.32,0.72,0,1)] ${
+                   isActive
+                     ? 'bg-[var(--color-accent-quiet)] font-semibold text-[var(--color-accent)] ' +
+                       'ring-1 ring-inset ring-[var(--color-accent-dim)]'
+                     : 'font-medium text-[var(--color-muted)] hover:bg-[var(--color-inset)] ' +
+                       'hover:text-[var(--color-text)]'
+                 }`
               }
             >
               {item.label}
@@ -154,14 +165,24 @@ export function Layout() {
       </header>
 
       {/* Mobile header keeps the identity without stealing vertical space. */}
-      <header className="sticky top-0 z-20 flex items-center justify-between border-b border-[var(--color-edge)] bg-[var(--color-ink)]/90 px-4 py-3 backdrop-blur md:hidden">
-        <span className="text-xs font-bold tracking-[0.18em] text-[var(--color-accent)]">MISSION</span>
+      <header className="material sticky top-0 z-20 flex items-center justify-between
+        border-b border-[var(--color-edge)] bg-[var(--color-ink)]/80 px-4 py-3
+        backdrop-blur-xl md:hidden">
+        <span className="flex items-center gap-2 text-xs font-bold tracking-[0.18em]
+          text-[var(--color-accent)]">
+          <span
+            aria-hidden="true"
+            className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]
+              shadow-[0_0_0_3px_var(--color-accent-quiet)]"
+          />
+          MISSION
+        </span>
         {refreshing && (
           <span className="text-[11px] uppercase tracking-widest text-[var(--color-muted)]">Syncing</span>
         )}
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-4 sm:px-6 md:pb-10">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:px-6 md:pb-14 md:pt-7">
         <Outlet />
       </main>
 
@@ -178,21 +199,41 @@ export function Layout() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition ${
-                  isActive ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]'
-                }`
+                `relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]
+                 transition duration-200 active:scale-[0.94] ${
+                   isActive
+                     ? 'font-semibold text-[var(--color-accent)]'
+                     : 'font-medium text-[var(--color-muted)]'
+                 }`
               }
             >
-              <Icon path={item.icon} />
-              {item.short}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <span
+                      aria-hidden="true"
+                      className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-[var(--color-accent)]"
+                    />
+                  )}
+                  <Icon path={item.icon} />
+                  {item.short}
+                </>
+              )}
             </NavLink>
           ))}
           <NavLink
             to="/settings"
-            className={`flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px] font-medium transition ${
-              onMore ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]'
-            }`}
+            className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]
+              transition duration-200 active:scale-[0.94] ${
+                onMore ? 'font-semibold text-[var(--color-accent)]' : 'font-medium text-[var(--color-muted)]'
+              }`}
           >
+            {onMore && (
+              <span
+                aria-hidden="true"
+                className="absolute inset-x-5 top-0 h-0.5 rounded-full bg-[var(--color-accent)]"
+              />
+            )}
             <Icon path="M4 6h16M4 12h16M4 18h16" />
             More
           </NavLink>

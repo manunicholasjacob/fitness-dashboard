@@ -86,7 +86,7 @@ export function Analytics() {
         ))}
       </div>
 
-      <h2 className="pt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+      <h2 className="pt-3 text-base font-semibold tracking-[-0.01em] text-[var(--color-text)]">
         Energy
       </h2>
 
@@ -137,7 +137,7 @@ export function Analytics() {
         )}
       </Card>
 
-      <h2 className="pt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+      <h2 className="pt-3 text-base font-semibold tracking-[-0.01em] text-[var(--color-text)]">
         Weight and Composition
       </h2>
 
@@ -175,7 +175,7 @@ export function Analytics() {
         )}
       </Card>
 
-      <h2 className="pt-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--color-muted)]">
+      <h2 className="pt-3 text-base font-semibold tracking-[-0.01em] text-[var(--color-text)]">
         Activity
       </h2>
 

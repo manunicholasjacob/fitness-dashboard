@@ -1,7 +1,7 @@
 import { useState, type ChangeEvent } from 'react'
 import { useData } from '../lib/data'
 import { Card, EmptyState, Stat } from '../components/ui'
-import { formatInt } from '../core/units'
+import { formatInt, pluralize } from '../core/units'
 import { parseGarminCsv, parseMfpCsv, type ImportResult } from '../lib/importers'
 import * as api from '../lib/api'
 
@@ -12,7 +12,7 @@ function relative(iso: string | null): string {
   const hours = Math.floor(ms / 3_600_000)
   if (hours < 1) return `${Math.max(1, Math.floor(ms / 60_000))} min ago`
   if (hours < 48) return `${hours}h ago`
-  return `${Math.floor(hours / 24)} days ago`
+  return `${pluralize(Math.floor(hours / 24), 'day')} ago`
 }
 
 export function Integrations() {
@@ -29,8 +29,8 @@ export function Integrations() {
   return (
     <div className="space-y-4 pb-8">
       <Card
-        title="How Syncing Works"
-        subtitle="Neither Garmin nor MyFitnessPal grants API access to individuals, so the laptop agent is the integration"
+        title="How syncing works"
+        subtitle="Neither service grants API access to individuals, so the sync agent is the integration"
       >
         <div className="space-y-3 text-sm text-[var(--color-soft)]">
           <p>
@@ -39,13 +39,19 @@ export function Integrations() {
             developers. There is no OAuth path either service will grant you.
           </p>
           <p>
-            The sync agent on your laptop closes that gap. It signs into Garmin directly with the
-            same flow the mobile app uses, and it reads your MyFitnessPal diary through a headless
-            browser using a profile you logged into once. Both run on a daily schedule and write
-            normalised rows here.
+            The sync agent closes that gap. It signs into Garmin directly with the same flow the
+            mobile app uses, and it reads MyFitnessPal through diary sharing, which returns the
+            day's entries as JSON against a key only you hold. Neither needs a browser, so neither
+            needs a machine that happens to be awake: both run in the cloud four times a day, at
+            10:00, 14:00, 18:00 and 21:00 Central.
+          </p>
+          <p>
+            Every run re-fetches the last three days rather than only today, so a missed window
+            heals itself and anything logged late is picked up.
           </p>
           <p className="text-xs text-[var(--color-muted)]">
-            Setup steps live in <code className="font-mono">docs/SYNC-AGENT.md</code>.
+            Setup steps and the failure playbook live in{' '}
+            <code className="font-mono">docs/SYNC-AGENT.md</code>.
           </p>
         </div>
       </Card>
@@ -53,7 +59,7 @@ export function Integrations() {
       <div className="grid gap-4 lg:grid-cols-2">
         {([
           ['garmin', 'Garmin Connect', 'Forerunner 255', garminDays] as const,
-          ['mfp', 'MyFitnessPal', 'Headless browser session', mfpDays] as const,
+          ['mfp', 'MyFitnessPal', 'Diary sharing key', mfpDays] as const,
         ]).map(([provider, title, subtitle, dayCount]) => {
           const last = lastFor(provider)
           const lastOk = lastSuccessFor(provider)
@@ -103,7 +109,7 @@ export function Integrations() {
           <div className="-mx-2 overflow-x-auto">
             <table className="w-full min-w-[480px] text-sm">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-[0.12em] text-[var(--color-muted)]">
+                <tr className="eyebrow text-left text-[var(--color-muted)]">
                   <th className="px-2 pb-2 font-semibold">Started</th>
                   <th className="px-2 pb-2 font-semibold">Provider</th>
                   <th className="px-2 pb-2 font-semibold">Status</th>
@@ -175,7 +181,7 @@ function ImportPanel({ onDone }: { onDone: () => Promise<void> }) {
       if (parsed.rows.length > 0) {
         const written = await api.bulkUpsertDaily(parsed.rows)
         await onDone()
-        setStatus(`Imported ${written} days.`)
+        setStatus(`Imported ${pluralize(written, 'day')}.`)
       } else {
         setStatus('No usable rows found.')
       }
@@ -194,7 +200,7 @@ function ImportPanel({ onDone }: { onDone: () => Promise<void> }) {
     >
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="block">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">
+          <span className="eyebrow text-[var(--color-muted)]">
             Garmin export
           </span>
           <input
@@ -210,7 +216,7 @@ function ImportPanel({ onDone }: { onDone: () => Promise<void> }) {
         </label>
 
         <label className="block">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--color-muted)]">
+          <span className="eyebrow text-[var(--color-muted)]">
             MyFitnessPal export
           </span>
           <input

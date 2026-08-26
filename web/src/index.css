@@ -31,7 +31,7 @@
   /* Text */
   --color-text: #e8eefc;
   --color-soft: #c9d6f0;
-  --color-muted: #95a4c0;
+  --color-muted: #9aa9c3;
   --color-faint: #79839b;
   --color-placeholder: #727d96;
 
@@ -66,9 +66,37 @@
   --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'Geist Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
-  /* One radius scale, applied consistently: cards 16, controls 12, chips pill. */
-  --radius-card: 1rem;
+  /*
+   * Radius scale. Not one value everywhere: the outer container is the softest
+   * shape and each nesting level tightens, which is what stops a card full of
+   * boxes from reading as a stack of identical rectangles.
+   */
+  --radius-hero: 1.5rem;
+  --radius-card: 1.125rem;
   --radius-control: 0.75rem;
+  --radius-inner: 0.625rem;
+
+  /*
+   * Elevation.
+   *
+   * Shadows carry the hue of the ground they fall on rather than neutral black,
+   * which is the difference between a card sitting on the page and a card
+   * pasted over it. Two layers each: a tight contact shadow and a wide ambient
+   * one, both from the same overhead light source.
+   */
+  --shadow-raised:
+    0 1px 2px -1px rgb(2 6 16 / 0.55),
+    0 6px 16px -6px rgb(2 6 16 / 0.5);
+  --shadow-hero:
+    0 2px 4px -2px rgb(2 6 16 / 0.6),
+    0 18px 44px -18px rgb(2 6 16 / 0.7);
+  --shadow-pop:
+    0 2px 6px -2px rgb(2 6 16 / 0.6),
+    0 14px 32px -12px rgb(2 6 16 / 0.6);
+
+  /* Ambient wash behind the hero, so the app's one headline number sits in
+     light rather than on flat card colour. */
+  --hero-glow: rgb(56 224 123 / 0.09);
 }
 
 /*
@@ -77,23 +105,32 @@
  * Not an inversion. Greens and ambers that read well on near-black are far too
  * bright in light mode, so each was re-solved numerically.
  *
- * Solved against #eef1f7 (the page background) rather than #ffffff, because
+ * Solved against #e8ecf4 (the page background) rather than #ffffff, because
  * that is the darkest surface any of these sit on. Solving against white left
  * the accent, warn and danger tones failing by a tenth of a point on the nav
  * and on tinted banners.
+ *
+ * --color-faint is the one token that does not clear 7:1, and deliberately so:
+ * solving it to 7:1 lands it on top of --color-muted, which would leave the
+ * palette with two identical greys and no dim tier at all. It is therefore
+ * restricted to its documented 4.6:1 uses, chart axes and placeholder text, and
+ * never carries a label or a value.
  */
 @media (prefers-color-scheme: light) {
   :root {
-    --color-ink: #eef1f7;
+    /* The ground is deliberately a step darker than the cards. White cards on a
+       near-white page separate only by their hairline border, which is what
+       made the old light mode read as a wireframe. */
+    --color-ink: #e8ecf4;
     --color-surface: #ffffff;
     --color-card: #ffffff;
-    --color-card-raised: #f8fafd;
-    --color-inset: #f4f6fb;
-    --color-edge: #dde3ee;
+    --color-card-raised: #f7f9fc;
+    --color-inset: #f2f5fa;
+    --color-edge: #dbe1ed;
 
     --color-text: #0f1526;
     --color-soft: #39435c;
-    --color-muted: #485161;
+    --color-muted: #464e5e;
     --color-faint: #616d84;
     --color-placeholder: #646d7e;
 
@@ -121,6 +158,20 @@
     --color-chart-grid: #e6ebf3;
     --color-chart-axis: #616d84;
     --color-chart-tooltip-bg: #ffffff;
+
+    /* Light-mode shadows are tinted with the page's blue-grey rather than
+       black, which keeps them reading as shade instead of smudge. */
+    --shadow-raised:
+      0 1px 2px -1px rgb(24 39 74 / 0.1),
+      0 6px 16px -8px rgb(24 39 74 / 0.14);
+    --shadow-hero:
+      0 2px 4px -2px rgb(24 39 74 / 0.1),
+      0 18px 44px -20px rgb(24 39 74 / 0.22);
+    --shadow-pop:
+      0 2px 6px -2px rgb(24 39 74 / 0.12),
+      0 14px 32px -14px rgb(24 39 74 / 0.2);
+
+    --hero-glow: rgb(31 124 69 / 0.07);
   }
 }
 
@@ -151,6 +202,94 @@ body {
 /* Tabular figures stop large changing numbers from jittering as they update. */
 .tnum {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Display numbers.
+ *
+ * Large figures set at body tracking look slack, because the letter-spacing
+ * that keeps 13px legible is far too loose at 72px. Optical sizing wants the
+ * opposite of what the default gives you, so large type gets negative tracking
+ * and a line-height under 1.
+ */
+.display {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.035em;
+  line-height: 0.92;
+  font-weight: 700;
+}
+
+/*
+ * Section labels.
+ *
+ * Small caps with wide tracking is the right treatment for a data label, and
+ * the wrong treatment for a heading. The app used it for both, which is how
+ * seventeen shouting labels ended up on one screen. `.eyebrow` stays for the
+ * genuine micro-labels sitting directly above a number; headings now use
+ * sentence case at a readable size.
+ */
+.eyebrow {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1.3;
+}
+
+/*
+ * A single grain layer over the whole page.
+ *
+ * Flat vector surfaces read as sterile at large sizes: the eye expects some
+ * noise in anything it believes is a physical surface. This is one fixed,
+ * non-interactive layer at very low opacity, inlined as SVG so it costs no
+ * request. It sits under the content and above the background.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+@media (prefers-color-scheme: light) {
+  body::before {
+    opacity: 0.028;
+  }
+}
+
+/* Anything the grain would otherwise sit on top of. */
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * Cards lift very slightly under the pointer.
+ *
+ * One pixel and a shadow change, not a scale transform: at card size a scale
+ * blurs the text mid-transition, and the point is to acknowledge the pointer,
+ * not to animate.
+ */
+.card-hover {
+  transition:
+    box-shadow 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    border-color 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (hover: hover) {
+  .card-hover:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-pop);
+  }
+}
+
+/* Anchor jumps land softly rather than teleporting. */
+html {
+  scroll-behavior: smooth;
 }
 
 /*

@@ -44,9 +44,24 @@ export function MissionCard({ compact = false }: { compact?: boolean }) {
   const projection = projectMissionCompletion(days, settings)
 
   return (
-    <Card accent className="bg-gradient-to-b from-[var(--color-card-raised)] to-[var(--color-card)]">
+    <Card
+      accent
+      tone="hero"
+      className="relative isolate overflow-hidden bg-gradient-to-b
+        from-[var(--color-card-raised)] to-[var(--color-card)]"
+    >
+      {/* An ambient wash centred behind the headline figure, so the one number
+          the app exists for sits in light rather than on flat card colour. It is
+          radial and off-centre-weighted rather than a linear fade, which is the
+          gradient that reads as a template. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 -top-24 -z-10 h-72
+          bg-[radial-gradient(60%_100%_at_50%_0%,var(--hero-glow),transparent_70%)]"
+      />
+
       <div className="text-center">
-        <h2 className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
+        <h2 className="eyebrow tracking-[0.2em] text-[var(--color-muted)]">
           Energy Deficit Mission
         </h2>
 
@@ -58,26 +73,33 @@ export function MissionCard({ compact = false }: { compact?: boolean }) {
           )} kilocalories accumulated, ${formatInt(p.remaining)} remaining.`}
         </p>
 
-        <p aria-hidden="true" className="tnum mt-3 text-5xl font-bold leading-none text-[var(--color-accent)] sm:text-7xl">
-          {p.percent.toFixed(1)}%
+        {/* The percent sign is set smaller and lighter than the figure. At the
+            same weight it reads as a fourth digit and steals from the number. */}
+        <p aria-hidden="true" className="display mt-4 text-6xl text-[var(--color-accent)] sm:text-8xl">
+          {p.percent.toFixed(1)}
+          <span className="ml-0.5 align-baseline text-[0.42em] font-semibold tracking-normal opacity-70">
+            %
+          </span>
         </p>
 
-        <p className="tnum mt-3 text-base text-[var(--color-text)] sm:text-lg">
-          {formatInt(p.accumulated)}{' '}
-          <span className="text-[var(--color-muted)]">/ {formatInt(p.target)} kcal</span>
+        <p className="tnum mt-4 text-base tracking-[-0.01em] text-[var(--color-text)] sm:text-lg">
+          <span className="font-semibold">{formatInt(p.accumulated)}</span>{' '}
+          <span className="text-[var(--color-muted)]">of {formatInt(p.target)} kcal</span>
         </p>
 
-        <div className="mx-auto mt-4 max-w-xl">
-          <ProgressBar percent={p.percent} height="h-4" />
+        <div className="mx-auto mt-5 max-w-xl">
+          <ProgressBar percent={p.percent} height="h-2.5" />
+          {/* The two ends of the bar, labelled. A bar with no scale asks the
+              reader to guess what full means. */}
+          <div className="mt-2 flex items-baseline justify-between text-[11px] text-[var(--color-muted)]">
+            <span className="tnum">{formatInt(p.remaining)} kcal to go</span>
+            <span className="tnum">{formatInt(p.target)}</span>
+          </div>
         </div>
-
-        <p className="tnum mt-3 text-sm text-[var(--color-muted)]">
-          {formatInt(p.remaining)} kcal remaining
-        </p>
       </div>
 
       {!compact && (
-        <div className="mt-5 grid grid-cols-2 gap-4 border-t border-[var(--color-edge)] pt-4 sm:grid-cols-4">
+        <div className="mt-7 grid grid-cols-2 gap-x-4 gap-y-6 border-t border-[var(--color-edge)] pt-6 sm:grid-cols-4">
           <Stat
             label="Theoretical lb"
             value={p.theoreticalPoundsLost.toFixed(2)}
@@ -130,6 +152,7 @@ export function TodayEnergyCard() {
     <Card
       title="Today's Energy"
       right={<Tag kind={today?.isComplete ? 'derived' : 'raw'} />}
+      className="flex h-full flex-col"
     >
       {!today ? (
         <EmptyState
@@ -137,7 +160,7 @@ export function TodayEnergyCard() {
           body="Garmin syncs automatically. Calories are the one number you enter yourself."
         />
       ) : (
-        <>
+        <div className="flex flex-1 flex-col">
           <div className="grid gap-3 sm:grid-cols-2">
             <AdjustmentChain
               label="Garmin expenditure"
@@ -153,12 +176,16 @@ export function TodayEnergyCard() {
             />
           </div>
 
-          <div className="mt-4 rounded-[var(--radius-control)] border border-[var(--color-edge)] bg-[var(--color-inset)] p-4 text-center">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--color-muted)]">
+          {/* This panel absorbs whatever height the row has spare. Letting the
+              card's own conclusion grow is better than leaving a gap under it,
+              which reads as a missing element rather than as breathing room. */}
+          <div className="mt-4 flex flex-1 flex-col justify-center rounded-[var(--radius-control)]
+            bg-[var(--color-inset)] px-5 py-7 text-center ring-1 ring-inset ring-[var(--color-edge)]">
+            <p className="eyebrow text-[var(--color-muted)]">
               Today's adjusted {(today.adjustedBalance ?? 0) >= 0 ? 'deficit' : 'surplus'}
             </p>
             <p
-              className={`tnum mt-1 text-4xl font-bold ${
+              className={`display mt-2 text-5xl ${
                 today.adjustedBalance === null
                   ? 'text-[var(--color-muted)]'
                   : today.adjustedBalance >= 0
@@ -168,6 +195,26 @@ export function TodayEnergyCard() {
             >
               {today.adjustedBalance === null ? '--' : formatSigned(today.adjustedBalance)}
             </p>
+
+            {/* The subtraction the figure above comes from. The two chains show
+                how each side was adjusted; without this the card stops one step
+                short of saying where the answer came from. */}
+            {today.adjustedBalance !== null && (
+              <p className="tnum mt-3 text-sm text-[var(--color-muted)]">
+                <span className="font-semibold text-[var(--color-soft)]">
+                  {formatInt(today.adjustedExpenditure)}
+                </span>{' '}
+                burned{' '}
+                <span aria-hidden="true" className="mx-0.5 text-[var(--color-muted)]">
+                  &minus;
+                </span>
+                <span className="sr-only">minus</span>{' '}
+                <span className="font-semibold text-[var(--color-soft)]">
+                  {formatInt(today.adjustedIntake)}
+                </span>{' '}
+                eaten
+              </p>
+            )}
             {!today.isComplete && (
               <p className="mt-2 text-xs text-[var(--color-warn)]">
                 {today.rawIntake === null
@@ -178,7 +225,7 @@ export function TodayEnergyCard() {
           </div>
 
           {today.rawIntake === null && <QuickCalories />}
-        </>
+        </div>
       )}
     </Card>
   )
@@ -405,7 +452,7 @@ export function TodayActivityCard() {
   return (
     <Card title="Today's Activity" right={<Tag kind="raw" />}>
       {!r ? (
-        <EmptyState title="No Garmin data today" body="The sync agent runs once a day from your laptop." />
+        <EmptyState title="No Garmin data today" body="Garmin syncs four times a day. If your watch has not uploaded recently, open Garmin Connect on your phone." />
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           <Stat label="Steps" value={formatInt(r.stepsTotal)} size="md" />

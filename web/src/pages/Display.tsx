@@ -5,7 +5,7 @@ import { morningStats } from '../core/morning'
 import { weightPoints } from '../core/body'
 import { rollingAverage } from '../core/trend'
 import { filterActivities, resolveRange, runningStats, summarize } from '../core/activity'
-import { formatDuration, formatInt, formatSigned, kgToLb } from '../core/units'
+import { formatDuration, formatInt, formatSigned, kgToLb, pluralize } from '../core/units'
 import { todayIso } from '../components/cards'
 import { ProgressBar } from '../components/ui'
 
@@ -101,7 +101,7 @@ export function Display() {
           label="Running This Month"
           value={monthRun.totalMiles.toFixed(1)}
           suffix="mi"
-          sub={`${monthRun.runs} runs`}
+          sub={pluralize(monthRun.runs, 'run')}
         />
       </section>
     </div>

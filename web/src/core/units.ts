@@ -66,3 +66,18 @@ export function formatSigned(n: number | null | undefined): string {
   const rounded = Math.round(n)
   return `${rounded > 0 ? '+' : ''}${rounded.toLocaleString('en-US')}`
 }
+
+/**
+ * Pluralise a count's noun.
+ *
+ * Small, but "1 sessions" and "1 days ago" are the kind of thing that makes an
+ * otherwise finished interface read as a draft.
+ */
+export function plural(count: number, one: string, many = `${one}s`): string {
+  return Math.abs(count) === 1 ? one : many
+}
+
+/** A count and its correctly pluralised noun, e.g. "1 session", "3 sessions". */
+export function pluralize(count: number, one: string, many = `${one}s`): string {
+  return `${count.toLocaleString('en-US')} ${plural(count, one, many)}`
+}

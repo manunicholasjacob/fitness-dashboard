@@ -10,7 +10,7 @@ import {
   workoutStreak,
   type RangeKey,
 } from '../core/activity'
-import { formatDistance, formatDuration, formatInt, formatPace } from '../core/units'
+import { formatDistance, formatDuration, formatInt, formatPace, pluralize } from '../core/units'
 import type { ActivityType } from '../core/types'
 import * as api from '../lib/api'
 
@@ -148,7 +148,7 @@ export function ActivityPage() {
                 <div key={type} className="flex items-center justify-between gap-4 border-b border-[var(--color-edge)] pb-2 last:border-0">
                   <span className="text-sm font-medium">{ACTIVITY_LABELS[type as ActivityType] ?? type}</span>
                   <span className="tnum text-xs text-[var(--color-muted)]">
-                    {v.count} sessions · {formatDuration(v.seconds)}
+                    {pluralize(v.count, 'session')} · {formatDuration(v.seconds)}
                     {v.meters > 0 ? ` · ${formatDistance(v.meters, settings.units, 1)}` : ''}
                   </span>
                 </div>
@@ -183,7 +183,7 @@ export function ActivityPage() {
           <div className="-mx-2 overflow-x-auto">
             <table className="w-full min-w-[560px] text-sm">
               <thead>
-                <tr className="text-left text-[11px] uppercase tracking-[0.12em] text-[var(--color-muted)]">
+                <tr className="eyebrow text-left text-[var(--color-muted)]">
                   <th className="px-2 pb-2 font-semibold">Date</th>
                   <th className="px-2 pb-2 font-semibold">Type</th>
                   <th className="px-2 pb-2 text-right font-semibold">Duration</th>

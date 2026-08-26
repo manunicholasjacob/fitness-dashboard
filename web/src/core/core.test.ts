@@ -16,7 +16,7 @@ import { linearFit, rollingAverage, trendChange } from './trend'
 import { minutesUntilDeadline, morningStats } from './morning'
 import { normalizeActivityType, resolveRange, runningStats, summarize, workoutStreak } from './activity'
 import { realityCheck } from './realitycheck'
-import { formatPace, kgToLb, lbToKg } from './units'
+import { formatPace, kgToLb, lbToKg, pluralize } from './units'
 import type { Activity, BodyEntry, DailyRecord, Settings } from './types'
 
 // Pinned to the factors the specification's worked examples are written in,
@@ -411,5 +411,22 @@ describe('units', () => {
     expect(formatPace(1000 / 300, 'metric')).toBe('5:00/km')
     expect(formatPace(null, 'imperial')).toBe('--')
     expect(formatPace(0, 'imperial')).toBe('--')
+  })
+})
+
+describe('pluralisation', () => {
+  it('uses the singular only for exactly one', () => {
+    expect(pluralize(0, 'session')).toBe('0 sessions')
+    expect(pluralize(1, 'session')).toBe('1 session')
+    expect(pluralize(2, 'session')).toBe('2 sessions')
+  })
+
+  it('accepts an irregular plural', () => {
+    expect(pluralize(1, 'entry', 'entries')).toBe('1 entry')
+    expect(pluralize(3, 'entry', 'entries')).toBe('3 entries')
+  })
+
+  it('groups thousands', () => {
+    expect(pluralize(1200, 'day')).toBe('1,200 days')
   })
 })
