@@ -1,5 +1,7 @@
 # Energy Deficit Mission Control
 
+**Live:** https://manunicholasjacob.com/fitness-dashboard/
+
 A personal fitness dashboard built around a single question:
 
 > How much verified, adjusted progress have I made toward my 84,000 kcal energy-deficit mission?
@@ -149,6 +151,54 @@ Perceived speed comes from a stale-while-revalidate cache: the app paints your l
 ## Wall display
 
 `/#/display` is a non-interactive, oversized, glanceable view for a tablet, monitor, or Raspberry Pi. It refreshes itself every 15 minutes.
+
+---
+
+## Design
+
+The interface follows Apple's Human Interface Guidelines as platform-agnostic
+rules, with the anti-default discipline of the taste-skill framework applied on
+top. Concretely:
+
+**Contrast is solved, not eyeballed.** Every foreground token was computed
+numerically against the surface it actually sits on. Body and secondary text
+clear 7:1, small tertiary labels clear 7:1 (HIG asks for that on small text),
+and chart axes and placeholders clear 4.6:1. The audit runs against rendered
+DOM, not the palette in the abstract: **713 text elements across 8 routes in
+both appearances, zero failures.**
+
+That audit found and fixed real defects. Chart axis labels were at 2.49:1 and
+input placeholders at 2.68:1, both well under the 4.5:1 floor. Fourteen labels
+were rendering at 9 to 10px, below the 11pt minimum legible size.
+
+**Dual appearance, with parity.** The light palette is not an inversion. Greens
+and ambers that read well on near-black are far too bright in light mode, so
+each was re-solved. They were re-solved twice: the first pass targeted white and
+left the accent, warn and danger tones failing by a tenth of a point on the
+tinted nav and banner surfaces. Following the platform convention there is
+deliberately **no in-app theme switch**; the app follows the system appearance.
+
+**Every colour comes from a token.** No component holds a hex value, which is
+what made light mode a token swap rather than a rewrite. Charts read the same
+tokens at runtime through `useChartTheme`, because Recharts needs literal
+strings and duplicating the palette in JavaScript would let the two drift.
+
+**Typeface:** Geist and Geist Mono, not Inter. Genuine tabular figures matter
+more here than novelty, and taste-skill discourages Inter as a default reach.
+
+**One radius scale**, enforced from tokens: cards 16px, controls 12px, chips
+pill. Mixed radii are what make an interface look assembled rather than designed.
+
+**Accessibility beyond colour.** `prefers-reduced-motion` and
+`prefers-reduced-transparency` are both honoured, the latter swapping the
+blurred bars for solid fills. Every chart carries a written summary stating what
+the data shows, exposed as its accessible label, because a picture is invisible
+to a screen reader. Focus rings are explicit on every interactive element.
+
+**Interaction states are complete**, not just the happy path: skeleton loaders
+shaped like the real layout rather than spinners, composed empty states that say
+how to populate them, inline validation below the field it belongs to, and a
+tactile `active:scale` on press.
 
 ---
 
