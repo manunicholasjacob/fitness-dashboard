@@ -19,7 +19,14 @@ import { realityCheck } from './realitycheck'
 import { formatPace, kgToLb, lbToKg } from './units'
 import type { Activity, BodyEntry, DailyRecord, Settings } from './types'
 
-const S: Settings = { ...DEFAULT_SETTINGS, startDate: '2026-01-01' }
+// Pinned to the factors the specification's worked examples are written in,
+// so changing the shipped default never silently rewrites what they assert.
+const S: Settings = {
+  ...DEFAULT_SETTINGS,
+  startDate: '2026-01-01',
+  garminAdjustmentFactor: 0.85,
+  intakeAdjustmentFactor: 1.1,
+}
 
 function day(date: string, garmin: number | null, mfp: number | null, extra: Partial<DailyRecord> = {}): DailyRecord {
   return {

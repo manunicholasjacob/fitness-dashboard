@@ -27,19 +27,19 @@ Two planning assumptions sit at the centre of the model:
 
 | Source | Assumption | Factor | Reasoning |
 | --- | --- | --- | --- |
-| Garmin | Over-reports expenditure | **x 0.85** | Wrist-based calorie estimates are consistently generous |
+| Garmin | Over-reports expenditure | **x 0.90** | Wrist-based calorie estimates are consistently generous |
 | MyFitnessPal | Under-reports intake | **x 1.10** | Logged food misses oil, portion drift, and untracked bites |
 
 ```
 Garmin reported:      2,800 kcal
-Adjustment:           x 0.85
-Adjusted expenditure: 2,380 kcal
+Adjustment:           x 0.90
+Adjusted expenditure: 2,520 kcal
 
 MyFitnessPal logged:  2,000 kcal
 Adjustment:           x 1.10
 Adjusted intake:      2,200 kcal
 
-Today's adjusted deficit:  180 kcal
+Today's adjusted deficit:  320 kcal
 ```
 
 **These are assumptions, not measurements**, and the app never lets you forget it. Every calorie figure in the UI is tagged `raw`, `adjusted`, `estimated`, or `derived`, and the full arithmetic chain is shown rather than hidden behind a single number.
@@ -54,7 +54,7 @@ It does **not** apply that multiplier. An automatic feedback loop between a nois
 
 The database stores **raw source data only**. There is no `adjusted_expenditure` column, no `daily_deficit` column, and no stored cumulative total. Every adjusted figure is computed at read time from your current settings.
 
-Change 0.85 to 0.87 and all of history reprices instantly, with not one stored row modified. That property is enforced by construction, and covered by a test.
+The Garmin factor moved from 0.85 to 0.90 on 26 August 2026 and every day of history repriced on the next page load, with not one stored row modified. That property is enforced by construction, and covered by a test.
 
 ### Incomplete days count as zero
 
@@ -226,7 +226,7 @@ npm run typecheck
 npm run build
 ```
 
-The test suite covers the worked examples from the specification (2,800 x 0.85 and 2,000 x 1.10 giving 180 kcal), the exact 84,000 kcal derivation, surplus days subtracting, incomplete days contributing nothing, factor changes repricing history without mutating raw data, the Navy body-fat formula, rolling averages and least-squares trends, streak handling across missing days, pace derived from totals rather than averaged, the projection horizon guard, and the CSV importers (quoted fields, BOMs, US dates, per-meal summing, and missing-column failure modes).
+The test suite covers the worked examples from the specification (2,800 x 0.85 and 2,000 x 1.10 giving 180 kcal, pinned to those factors so changing the shipped default cannot silently rewrite what they assert), the exact 84,000 kcal derivation, surplus days subtracting, incomplete days contributing nothing, factor changes repricing history without mutating raw data, the Navy body-fat formula, rolling averages and least-squares trends, streak handling across missing days, pace derived from totals rather than averaged, the projection horizon guard, and the CSV importers (quoted fields, BOMs, US dates, per-meal summing, and missing-column failure modes).
 
 ---
 

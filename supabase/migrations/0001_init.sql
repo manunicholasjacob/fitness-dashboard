@@ -3,7 +3,7 @@
 -- Design rule that everything else follows: these tables store RAW source data
 -- only. There is no adjusted_expenditure column, no daily_deficit column, and
 -- no cumulative total. Every adjusted figure is derived in the app from the
--- current settings, which is what makes "change the 0.85 factor without
+-- current settings, which is what makes "change the correction factor without
 -- rewriting history" true by construction rather than by careful bookkeeping.
 
 create extension if not exists "pgcrypto";

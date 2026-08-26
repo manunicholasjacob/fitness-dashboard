@@ -67,7 +67,7 @@ export const DEFAULT_SETTINGS: Settings = {
   missionBufferPercent: 20,
   missionTargetOverride: null,
 
-  garminAdjustmentFactor: 0.85,
+  garminAdjustmentFactor: 0.9,
   intakeAdjustmentFactor: 1.1,
 
   morningStepGoal: 7000,
