@@ -73,6 +73,7 @@ class Config:
     mfp_email: str | None
     mfp_password: str | None
     mfp_username: str | None
+    mfp_diary_key: str | None
     timezone: str
     backfill_days: int
     headless: bool
@@ -117,6 +118,9 @@ def load_config(strict: bool = True) -> Config:
         mfp_email=os.environ.get("MFP_EMAIL", "").strip() or None,
         mfp_password=os.environ.get("MFP_PASSWORD", "").strip() or None,
         mfp_username=os.environ.get("MFP_USERNAME", "").strip() or None,
+        # Key for a "Locked with a Key" diary. Not a login credential: it only
+        # unlocks the printable-diary view.
+        mfp_diary_key=os.environ.get("MFP_DIARY_KEY", "").strip() or None,
         timezone=os.environ.get("TIMEZONE", "America/Chicago").strip(),
         backfill_days=int(os.environ.get("BACKFILL_DAYS", "3")),
         headless=os.environ.get("HEADLESS", "1").strip() != "0",

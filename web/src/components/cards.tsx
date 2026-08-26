@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom'
 import { useData } from '../lib/data'
 import { AdjustmentChain, Card, EmptyState, ProgressBar, Stat, Tag } from './ui'
+import { QuickCalories } from './QuickCalories'
 import {
   cumulativeBalance,
   missionProgress,
@@ -134,7 +134,7 @@ export function TodayEnergyCard() {
       {!today ? (
         <EmptyState
           title="No data for today yet"
-          body="Garmin syncs each morning. Nutrition arrives with the daily MyFitnessPal check."
+          body="Garmin syncs automatically. Calories are the one number you enter yourself."
         />
       ) : (
         <>
@@ -170,14 +170,14 @@ export function TodayEnergyCard() {
             </p>
             {!today.isComplete && (
               <p className="mt-2 text-xs text-[var(--color-warn)]">
-                {today.rawIntake === null ? 'Nutrition' : 'Garmin'} data missing, so today counts as zero
-                toward the mission.{' '}
-                <Link to="/check-in" className="underline underline-offset-2">
-                  Log it
-                </Link>
+                {today.rawIntake === null
+                  ? 'No calories logged yet, so today counts as zero toward the mission.'
+                  : 'Garmin has not synced today, so today counts as zero toward the mission.'}
               </p>
             )}
           </div>
+
+          {today.rawIntake === null && <QuickCalories />}
         </>
       )}
     </Card>

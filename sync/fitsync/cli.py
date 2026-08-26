@@ -23,6 +23,7 @@ from .config import BROWSER_PROFILE, ConfigError, load_config
 from .doctor import run_doctor
 from .garmin import GarminAdapter, GarminError, date_range
 from .mfp import MfpAdapter, MfpError
+from .mfp_http import MfpHttpAdapter, MfpHttpError
 from .store import Store, StoreError
 
 log = logging.getLogger("fitsync")
@@ -97,65 +98,51 @@ def sync_garmin(store: Store, config, days: int) -> int:
 
 
 def sync_mfp(store: Store, config, days: int) -> int:
-    has_credentials = bool(config.mfp_email and config.mfp_password)
-    if not BROWSER_PROFILE.exists() and not has_credentials:
-        log.error(
-            "No MyFitnessPal credentials and no saved session. Set MFP_EMAIL and "
-            "MFP_PASSWORD in sync/.env, or run: npm run sync:login"
+    """Pull nutrition from the printable diary over plain HTTP.
+
+    No browser and no login: the printable diary is gated by MyFitnessPal's own
+    diary-sharing setting, so a shared diary is readable with a GET. The login
+    form sits behind a Cloudflare bot check that cannot be automated, and is
+    deliberately not involved.
+    """
+    if not config.mfp_username:
+        log.info(
+            "MFP_USERNAME not set, skipping MyFitnessPal. Calories are entered on the dashboard."
         )
         return 0
 
-    username = config.mfp_username
     log_id = store.start_sync("mfp")
-
     try:
-        with MfpAdapter(username, headless=config.headless) as mfp:
-            # A saved session is faster, but credentials mean an expired one
-            # repairs itself instead of waiting for someone to notice.
-            if not mfp.is_signed_in():
-                if not has_credentials:
-                    raise MfpError(
-                        "The saved MyFitnessPal session has expired and no credentials "
-                        "are set. Add MFP_EMAIL and MFP_PASSWORD to sync/.env, or run: "
-                        "npm run sync:login"
-                    )
-                log.info("Session expired, signing in with stored credentials.")
-                mfp.login_with_password(config.mfp_email, config.mfp_password)
+        adapter = MfpHttpAdapter(config.mfp_username, config.mfp_diary_key)
 
-            if not username:
-                username = mfp.detect_username()
-                if not username:
-                    raise MfpError(
-                        "Could not determine your MyFitnessPal username. Set MFP_USERNAME "
-                        "in sync/.env (it is the last part of your profile URL)."
-                    )
-                mfp.username = username
-                log.info("Detected MyFitnessPal username: %s", username)
+        readable, detail = adapter.check_access()
+        if not readable:
+            raise MfpHttpError(detail)
+        log.info("MyFitnessPal: %s", detail)
 
-            rows = []
-            missing = 0
-            for day in date_range(days):
-                row = mfp.nutrition_for(day)
-                if row:
-                    rows.append(row)
-                    log.info("MyFitnessPal %s: %s kcal", day, row.get("raw_mfp_calories"))
-                else:
-                    missing += 1
+        rows = []
+        empty = 0
+        for day in date_range(days):
+            row = adapter.nutrition_for(day)
+            if row:
+                rows.append(row)
+                log.info("MyFitnessPal %s: %s kcal", day, row.get("raw_mfp_calories"))
+            else:
+                empty += 1
 
-            written = store.upsert_daily(rows)
+        written = store.upsert_daily(rows)
 
-        # An empty diary is a legitimate outcome, but a run where every single
-        # day came back empty usually means something is broken, not fasting.
+        # An empty diary is legitimate; an entirely empty window usually is not.
         status = "success" if rows else "partial"
         store.finish_sync(
             log_id,
             status=status,
             records=written,
-            error=None if rows else f"No diary entries found across {missing} days.",
+            error=None if rows else f"No diary entries found across {empty} days.",
         )
         return written
 
-    except (MfpError, StoreError) as exc:
+    except (MfpHttpError, StoreError) as exc:
         log.error("MyFitnessPal sync failed: %s", exc)
         store.finish_sync(log_id, status="failed", error=str(exc))
         return 0
@@ -172,7 +159,7 @@ def cmd_login(config) -> int:
     print("Opening a browser so you can sign in to MyFitnessPal once.")
     print(f"The session will be saved to: {BROWSER_PROFILE}\n")
     with MfpAdapter(None, headless=False) as mfp:
-        if mfp.interactive_login(timeout_seconds=720):
+        if mfp.interactive_login(timeout_seconds=720, prefill_email=config.mfp_email):
             username = mfp.detect_username()
             print("\nSigned in successfully.")
             if username:
@@ -251,12 +238,18 @@ def main(argv: list[str] | None = None) -> int:
 
     started = datetime.now()
     total = 0
+    failures: list[str] = []
     if args.command in ("all", "garmin"):
-        total += sync_garmin(store, config, days)
+        written = sync_garmin(store, config, days)
+        total += written
+        if config.garmin_email and written == 0:
+            failures.append("garmin")
     if args.command in ("all", "mfp"):
         total += sync_mfp(store, config, days)
 
     elapsed = (datetime.now() - started).total_seconds()
     log.info("Wrote %d records in %.1fs", total, elapsed)
-    # Non-zero exit lets Task Scheduler surface a failed run.
-    return 0 if total else 1
+    # Non-zero exit lets Task Scheduler surface a genuinely failed run. Writing
+    # nothing is normal when the day's data has not changed, so failure is
+    # judged on whether a provider errored, not on the record count.
+    return 0 if not failures else 1

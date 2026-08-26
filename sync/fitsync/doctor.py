@@ -211,86 +211,67 @@ def check_garmin(config: Config) -> list[Check]:
     return checks
 
 
-MFP_PASSWORD_FIX = (
-    "Set MFP_EMAIL and MFP_PASSWORD in sync/.env. If you sign in to MyFitnessPal "
-    "with Google you have no password yet: set one at "
-    "myfitnesspal.com/account/forgot_password. Do NOT rely on Google sign-in here, "
-    "because Google refuses OAuth from automated browsers by design."
+MFP_NOTE = (
+    "MyFitnessPal cannot be automated: its login form is behind a Cloudflare "
+    "Turnstile bot check that fails for any automated browser, and this project "
+    "does not defeat bot checks. Enter calories on the dashboard instead, which "
+    "takes about ten seconds, or import a MyFitnessPal CSV to backfill. Garmin "
+    "still syncs automatically and covers everything else."
+)
+
+
+MFP_SETUP = (
+    "In MyFitnessPal go to Settings > Diary Settings > Diary Sharing and choose "
+    "'Locked with a Key' (recommended, keeps the diary private) or 'Public'. Put "
+    "your username in MFP_USERNAME and the key in MFP_DIARY_KEY in sync/.env. No "
+    "login is involved: the printable diary is gated by that sharing setting, not "
+    "by authentication."
 )
 
 
 def check_mfp(config: Config) -> list[Check]:
-    has_credentials = bool(config.mfp_email and config.mfp_password)
+    """Check the printable diary over plain HTTP.
 
-    if not BROWSER_PROFILE.exists() and not has_credentials:
+    The login form is behind a Cloudflare bot check that cannot be automated and
+    is not used. Nothing here needs a browser.
+    """
+    if not config.mfp_username:
         return [
             Check(
-                "MyFitnessPal credentials",
+                "MyFitnessPal",
                 False,
-                "no credentials and no saved session",
-                MFP_PASSWORD_FIX,
+                "MFP_USERNAME not set, calories are entered by hand",
+                MFP_SETUP,
             )
         ]
 
-    from .mfp import MfpAdapter, MfpError
+    from .mfp_http import MfpHttpAdapter
+
+    adapter = MfpHttpAdapter(config.mfp_username, config.mfp_diary_key)
+    readable, detail = adapter.check_access()
+    if not readable:
+        return [Check("MyFitnessPal diary", False, detail, MFP_SETUP)]
+
+    checks = [Check("MyFitnessPal diary", True, f"{config.mfp_username}: {detail}")]
 
     try:
-        with MfpAdapter(config.mfp_username, headless=config.headless) as mfp:
-            if not mfp.is_signed_in():
-                if not has_credentials:
-                    return [
-                        Check(
-                            "MyFitnessPal session",
-                            False,
-                            "saved session has expired and no credentials are set",
-                            MFP_PASSWORD_FIX,
-                        )
-                    ]
-                try:
-                    mfp.login_with_password(config.mfp_email, config.mfp_password)
-                except MfpError as exc:
-                    return [Check("MyFitnessPal sign-in", False, str(exc)[:220], MFP_PASSWORD_FIX)]
-                checks = [Check("MyFitnessPal sign-in", True, "signed in with stored password")]
-            else:
-                checks = [
-                    Check(
-                        "MyFitnessPal session",
-                        True,
-                        "signed in" + ("" if has_credentials else ", no credentials set as backup"),
-                    )
-                ]
+        row = adapter.nutrition_for(date.today())
+    except Exception as exc:  # noqa: BLE001
+        return checks + [Check("MyFitnessPal read", False, str(exc)[:200], MFP_SETUP)]
 
-            username = mfp.username or mfp.detect_username()
-            if username:
-                mfp.username = username
-                checks.append(Check("MyFitnessPal username", True, username))
-            else:
-                checks.append(
-                    Check(
-                        "MyFitnessPal username",
-                        False,
-                        "could not detect",
-                        "Set MFP_USERNAME in sync/.env, from your profile URL.",
-                    )
-                )
-                return checks
-
-            row = mfp.nutrition_for(date.today())
-            if row:
-                checks.append(Check("MyFitnessPal diary", True, f"{row['raw_mfp_calories']} kcal today"))
-            else:
-                checks.append(
-                    Check(
-                        "MyFitnessPal diary",
-                        False,
-                        "no entries readable for today",
-                        "Either nothing is logged yet today, or your diary is private. "
-                        "Diary privacy must be Public or Friends-only for the printable view to render.",
-                    )
-                )
-            return checks
-    except MfpError as exc:
-        return [Check("MyFitnessPal session", False, str(exc)[:200], "Run: npm run sync:login")]
+    if row:
+        checks.append(
+            Check("MyFitnessPal read", True, f"{row['raw_mfp_calories']:.0f} kcal logged today")
+        )
+    else:
+        checks.append(
+            Check(
+                "MyFitnessPal read",
+                True,
+                "diary readable, nothing logged today yet",
+            )
+        )
+    return checks
 
 
 def run_doctor(config: Config) -> int:

@@ -264,22 +264,47 @@ class MfpAdapter:
                 log.info("Signed in to MyFitnessPal with a password.")
                 return True
 
+        # MyFitnessPal protects this form with Cloudflare Turnstile. A bot check
+        # is there to be honoured, not defeated: the agent never attempts to
+        # solve one. What works is the account owner clearing it once by hand,
+        # after which the saved session is reused and the form is never seen
+        # again.
+        if self._has_turnstile(page):
+            raise MfpError(
+                "MyFitnessPal's login form is protected by a Cloudflare Turnstile bot "
+                "check, which this agent will not attempt to solve. Run "
+                "`npm run sync:login`, sign in with your MyFitnessPal email and password "
+                "and clear the check yourself. The session is saved and reused after that, "
+                "so you only do this when it eventually lapses."
+            )
+
         body = ""
         try:
             body = page.inner_text("body")[:400]
         except Exception:  # noqa: BLE001
             pass
-        if "captcha" in body.lower() or "verify" in body.lower():
-            raise MfpError(
-                "MyFitnessPal presented a captcha or verification step. Run once with "
-                "HEADLESS=0 to clear it by hand; the session is reused afterwards."
-            )
+        detail = " ".join(body[:160].split())
         raise MfpError(
             "MyFitnessPal did not accept those credentials. If your account was created "
-            "with Google sign-in, set a password first at myfitnesspal.com/account/forgot_password"
+            "with Google sign-in, set a password first at "
+            f"myfitnesspal.com/account/forgot_password. Page said: {detail}"
         )
 
-    def interactive_login(self, timeout_seconds: int = 420) -> bool:
+    @staticmethod
+    def _has_turnstile(page: Any) -> bool:
+        """Whether a Cloudflare Turnstile widget is present on the page."""
+        try:
+            return bool(
+                page.evaluate(
+                    """() => !!document.querySelector(
+                         '[name="cf-turnstile-response"], .cf-turnstile, iframe[src*="challenges.cloudflare.com"]'
+                       )"""
+                )
+            )
+        except Exception:  # noqa: BLE001
+            return False
+
+    def interactive_login(self, timeout_seconds: int = 420, prefill_email: str | None = None) -> bool:
         """Open a visible window and wait for you to sign in.
 
         Polls for success instead of waiting on a keypress, so this works when
