@@ -13,3 +13,4 @@ sync/.garmin-tokens/
 .agents/
 .claude/skills/
 web/.env.local
+.wrangler/
