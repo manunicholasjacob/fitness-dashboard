@@ -1,10 +1,10 @@
 import { Suspense, lazy, useState } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './lib/auth'
-import { DataProvider, useData } from './lib/data'
+import { DataProvider } from './lib/data'
 import { isUnlocked } from './lib/pin'
+import { isConfigured } from './lib/supabase'
 import { Layout } from './components/Layout'
-import { Login } from './pages/Login'
 import { PinLock } from './pages/PinLock'
 import { Dashboard } from './pages/Dashboard'
 
@@ -18,6 +18,15 @@ const CheckIn = lazy(() => import('./pages/CheckIn').then((m) => ({ default: m.C
 const Integrations = lazy(() => import('./pages/Integrations').then((m) => ({ default: m.Integrations })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const Display = lazy(() => import('./pages/Display').then((m) => ({ default: m.Display })))
+
+/** Digits in the unlock code. Must match the code hash held by the edge function. */
+const CODE_LENGTH = Number(import.meta.env.VITE_CODE_LENGTH ?? 4)
+
+function Centered({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-screen items-center justify-center px-6 text-center">{children}</div>
+  )
+}
 
 function RouteFallback() {
   return <p className="py-20 text-center text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">Loading</p>
@@ -46,48 +55,52 @@ function AppRoutes() {
 }
 
 /**
- * The lock screen sits inside DataProvider, because the code's hash lives in
- * settings and reading settings needs the session. That ordering is deliberate:
- * the session is what actually grants access, and the code is a convenience
- * gate on top of it rather than a substitute for it.
+ * The code is the only way in.
+ *
+ * There is no password screen. The code is checked by an edge function that
+ * holds the account credentials as server secrets and returns a session, so
+ * nothing sensitive is present in the published bundle. The session that comes
+ * back is a normal Supabase session, which means every request afterwards is
+ * still governed by row-level security exactly as before.
  */
-function LockGate() {
-  const { settings, loading } = useData()
-  const [unlocked, setUnlocked] = useState(isUnlocked)
-
-  if (unlocked) return <AppRoutes />
-
-  // Wait for settings before deciding, or a slow load would flash the
-  // "no code set" screen at someone who does have one.
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">Loading</p>
-      </div>
-    )
-  }
-
-  return <PinLock expectedHash={settings.unlockPinHash} onUnlock={() => setUnlocked(true)} />
-}
-
 function Shell() {
   const { session, loading } = useAuth()
+  const [unlocked, setUnlocked] = useState(isUnlocked)
 
-  if (loading) {
+  if (!isConfigured) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">Loading</p>
-      </div>
+      <Centered>
+        <div className="max-w-sm">
+          <h1 className="text-2xl font-bold tracking-[0.2em] text-[var(--color-accent)]">
+            MANU FITNESS
+          </h1>
+          <p className="mt-6 rounded-[var(--radius-control)] border border-[var(--color-warn-edge)] bg-[var(--color-warn-quiet)] p-4 text-sm text-[var(--color-warn)]">
+            This build has no backend configured. Set <code className="font-mono">VITE_SUPABASE_URL</code>{' '}
+            and <code className="font-mono">VITE_SUPABASE_ANON_KEY</code>, or run with{' '}
+            <code className="font-mono">VITE_DEMO_MODE=1</code>.
+          </p>
+        </div>
+      </Centered>
     )
   }
 
-  // No session means a new device or cleared storage: sign in properly once.
-  // After that the session persists and the code takes over.
-  if (!session) return <Login />
+  if (loading) {
+    return (
+      <Centered>
+        <p className="text-xs uppercase tracking-[0.2em] text-[var(--color-muted)]">Loading</p>
+      </Centered>
+    )
+  }
+
+  // A stored session still has to clear the lock screen, so reopening the app
+  // asks for the code rather than walking straight in.
+  if (!session || !unlocked) {
+    return <PinLock codeLength={CODE_LENGTH} onUnlocked={() => setUnlocked(true)} />
+  }
 
   return (
     <DataProvider>
-      <LockGate />
+      <AppRoutes />
     </DataProvider>
   )
 }

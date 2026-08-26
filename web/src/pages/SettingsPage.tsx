@@ -9,7 +9,7 @@ import { settingsSchema } from '../core/settings'
 import * as api from '../lib/api'
 import { generateDemoData } from '../lib/demo'
 import { clearCache } from '../lib/cache'
-import { PIN_LENGTH, hashPin, lock } from '../lib/pin'
+import { lock } from '../lib/pin'
 
 export function SettingsPage() {
   const { settings, updateSettings, refresh } = useData()
@@ -340,111 +340,26 @@ function DataSection({ onChanged }: { onChanged: () => Promise<void> }) {
 }
 
 /**
- * Changing the unlock code.
+ * The unlock code lives on the server.
  *
- * Only the hash is stored, and only the hash ever leaves the browser. The code
- * itself is never written to the database or sent anywhere.
+ * It is verified by an edge function that also holds the account credentials,
+ * which is what keeps them out of the published bundle. Changing it therefore
+ * means updating a server secret, not a row in this database, and this card
+ * says so rather than offering a control that would not work.
  */
 function UnlockCodeCard() {
-  const { settings, updateSettings } = useData()
-  const [code, setCode] = useState('')
-  const [confirm, setConfirm] = useState('')
-  const [status, setStatus] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
-
-  const digitsOnly = (v: string) => v.replace(/\D/g, '').slice(0, PIN_LENGTH)
-  const complete = code.length === PIN_LENGTH
-  const matches = complete && code === confirm
-
-  async function save() {
-    setBusy(true)
-    setStatus(null)
-    try {
-      await updateSettings({ ...settings, unlockPinHash: await hashPin(code) })
-      setStatus('Unlock code updated.')
-      setCode('')
-      setConfirm('')
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : 'Could not save.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  async function removeCode() {
-    setBusy(true)
-    setStatus(null)
-    try {
-      await updateSettings({ ...settings, unlockPinHash: null })
-      setStatus('Lock screen removed. Anyone with this device can open the app.')
-    } catch (e) {
-      setStatus(e instanceof Error ? e.message : 'Could not save.')
-    } finally {
-      setBusy(false)
-    }
-  }
-
   return (
-    <Card
-      title="Unlock Code"
-      subtitle={
-        settings.unlockPinHash
-          ? `${PIN_LENGTH} digits, asked for each time you open the app`
-          : 'No lock screen is set'
-      }
-    >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Field label="New code">
-          <input
-            type="password"
-            inputMode="numeric"
-            autoComplete="new-password"
-            value={code}
-            onChange={(e) => setCode(digitsOnly(e.target.value))}
-            placeholder={'0'.repeat(PIN_LENGTH)}
-            className={`${inputClass} tnum text-xl tracking-[0.4em]`}
-          />
-        </Field>
-        <Field
-          label="Confirm"
-          error={confirm.length === PIN_LENGTH && !matches ? 'Codes do not match' : null}
-        >
-          <input
-            type="password"
-            inputMode="numeric"
-            autoComplete="new-password"
-            value={confirm}
-            onChange={(e) => setConfirm(digitsOnly(e.target.value))}
-            placeholder={'0'.repeat(PIN_LENGTH)}
-            className={`${inputClass} tnum text-xl tracking-[0.4em]`}
-          />
-        </Field>
-      </div>
-
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <Button onClick={save} disabled={!matches || busy}>
-          {busy ? 'Saving...' : 'Set code'}
-        </Button>
-        {settings.unlockPinHash && (
-          <Button variant="danger" disabled={busy} onClick={removeCode}>
-            Remove lock screen
-          </Button>
-        )}
-        {status && (
-          <span
-            className={`text-xs ${
-              status.includes('updated') ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]'
-            }`}
-          >
-            {status}
-          </span>
-        )}
-      </div>
-
-      <p className="mt-4 text-xs text-[var(--color-muted)]">
-        This is a lock screen, not a password. Your data is protected by the account
-        sign-in and row-level security; the code just saves you typing an email and
-        password every time. Only its hash is stored, never the code itself.
+    <Card title="Unlock Code" subtitle="Checked on the server, not in the browser">
+      <p className="text-sm text-[var(--color-soft)]">
+        Your code is verified by an edge function that holds the account credentials
+        as server secrets. That is why there is no password screen and why nothing
+        sensitive appears in the app bundle.
+      </p>
+      <p className="mt-3 text-xs text-[var(--color-muted)]">
+        To change it, update the <code className="font-mono">UNLOCK_CODE_HASH</code>{' '}
+        environment variable on the Cloudflare Pages project with the salted SHA-256
+        of the new code. A longer code is materially stronger: four digits is 10,000
+        combinations, six is a million, for two extra taps.
       </p>
     </Card>
   )

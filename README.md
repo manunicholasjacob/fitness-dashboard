@@ -132,15 +132,31 @@ The Integrations page accepts Garmin and MyFitnessPal CSV exports for backfillin
 
 ---
 
-## Authentication
+## Getting in
 
-Supabase Auth, one account, email and password. Every table carries row-level security requiring `auth.uid() = user_id`, so signed out the API returns nothing.
+There is no password screen. The app opens to a numeric keypad, and the code is
+the only way in.
 
-The Supabase anon key ships in the built bundle. That is by design: it is a public identifier, not a secret, and RLS is what actually protects the data. **No password or API secret is ever committed or bundled.**
+The code is **verified on the server**, by a Cloudflare Pages Function that
+holds the account credentials as environment secrets. The browser sends a code
+and receives a Supabase session; nothing sensitive is present in the published
+bundle, and reading the JavaScript reveals nothing usable. Verified on every
+deploy: the bundle contains no email, no password, and not even the code hash.
 
-You stay signed in on each device indefinitely, so in practice you log in once per phone or laptop.
+The session that comes back is an ordinary Supabase session, so every request
+afterwards is still governed by row-level security exactly as before. The code
+replaces the login form, not the access control underneath it.
 
----
+**The trade worth understanding.** A short numeric code is a small search space,
+and the endpoint is reachable by anyone who finds the URL. Three things blunt
+that: every attempt costs a fixed delay regardless of outcome, repeated failures
+from one address are locked out, and the comparison is timing-safe. Guessing is
+slow and noisy rather than impossible, which is why the code length is
+configurable. Four digits is 10,000 combinations; six is a million, for two
+extra taps.
+
+The Supabase publishable key still ships in the bundle. That is by design: it is
+a public identifier, and row-level security is what protects the data.
 
 ## Mobile and PWA
 

@@ -1,46 +1,82 @@
 /**
- * Device unlock code.
+ * Unlock code.
  *
- * This is a lock screen, not authentication. Access control is still Supabase
- * Auth plus row-level security: the app only reaches this point when it already
- * holds a valid session for the account. The code exists so the everyday path
- * is four digits instead of an email and a password.
+ * The code is the only way in. It is verified by an edge function, never in the
+ * browser, so the account credentials are not present in the published bundle
+ * and cannot be read out of it. The client sends a code and receives a session.
  *
- * That distinction is why the credentials are not embedded anywhere. If they
- * were, anyone could read them out of the published bundle and query the API
- * directly, and the code would be decoration. A new device still signs in
- * properly once; after that the session persists and the code takes over.
+ * That server-side check is the whole reason this is safe to do. Embedding the
+ * credentials so the browser could sign itself in would hand full database
+ * access to anyone who opened the JavaScript.
  */
 
-const SALT = 'mission-unlock:'
 const UNLOCKED_KEY = 'mission-unlocked'
 
-export const PIN_LENGTH = 4
+export const MIN_CODE_LENGTH = 4
+export const MAX_CODE_LENGTH = 10
 
-/** SHA-256 of the salted code, as lowercase hex. */
-export async function hashPin(pin: string): Promise<string> {
-  const bytes = new TextEncoder().encode(SALT + pin)
-  const digest = await crypto.subtle.digest('SHA-256', bytes)
-  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, '0')).join('')
+export interface UnlockResult {
+  ok: boolean
+  /** Present on success. */
+  session?: { access_token: string; refresh_token: string }
+  /** Present on failure, safe to show. */
+  error?: string
+  /** True when the server is throttling further attempts. */
+  throttled?: boolean
 }
 
-export async function verifyPin(pin: string, expectedHash: string | null): Promise<boolean> {
-  if (!expectedHash) return false
-  return (await hashPin(pin)) === expectedHash
+/** Exchange a code for a session. */
+export async function redeemCode(code: string): Promise<UnlockResult> {
+  let response: Response
+  try {
+    response = await fetch('/api/unlock', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code }),
+    })
+  } catch {
+    return { ok: false, error: 'Could not reach the server. Check your connection.' }
+  }
+
+  let payload: Record<string, unknown> = {}
+  try {
+    payload = (await response.json()) as Record<string, unknown>
+  } catch {
+    /* fall through to the status-based message */
+  }
+
+  if (response.ok && typeof payload.access_token === 'string' && typeof payload.refresh_token === 'string') {
+    return {
+      ok: true,
+      session: {
+        access_token: payload.access_token,
+        refresh_token: payload.refresh_token,
+      },
+    }
+  }
+
+  return {
+    ok: false,
+    throttled: response.status === 429,
+    error:
+      typeof payload.error === 'string'
+        ? payload.error
+        : `Unlock failed (${response.status}).`,
+  }
 }
 
 /**
- * Whether this session is already unlocked.
+ * Whether this browsing session has already been unlocked.
  *
- * Held in sessionStorage rather than localStorage on purpose: it survives
- * navigation within the app but not closing it, so reopening the dashboard asks
- * for the code again. That is the behaviour a lock screen should have.
+ * sessionStorage, not localStorage: it survives navigation inside the app but
+ * not closing it, which is the behaviour a lock screen should have. The
+ * Supabase session itself persists separately, so unlocking again does not
+ * require another round trip in most cases.
  */
 export function isUnlocked(): boolean {
   try {
     return sessionStorage.getItem(UNLOCKED_KEY) === '1'
   } catch {
-    // Private mode or blocked storage: fail closed and ask for the code.
     return false
   }
 }
@@ -49,7 +85,7 @@ export function markUnlocked(): void {
   try {
     sessionStorage.setItem(UNLOCKED_KEY, '1')
   } catch {
-    /* the lock simply re-prompts next navigation */
+    /* the lock simply re-prompts on the next navigation */
   }
 }
 

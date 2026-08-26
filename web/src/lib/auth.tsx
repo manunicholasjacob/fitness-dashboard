@@ -15,7 +15,6 @@ interface AuthState {
   session: Session | null
   loading: boolean
   configured: boolean
-  signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
 }
 
@@ -50,15 +49,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       loading,
       configured: isConfigured || isDemoMode,
-      async signIn(email, password) {
-        if (isDemoMode) {
-          setSession(DEMO_SESSION)
-          return
-        }
-        if (!supabase) throw new Error('Supabase is not configured.')
-        const { error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) throw error
-      },
       async signOut() {
         if (isDemoMode) {
           setSession(null)
