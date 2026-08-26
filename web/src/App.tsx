@@ -71,10 +71,10 @@ function Shell() {
     return (
       <Centered>
         <div className="max-w-sm">
-          <h1 className="text-2xl font-bold tracking-[0.2em] text-[var(--color-accent)]">
+          <h1 className="text-2xl font-bold tracking-[0.2em] text-[var(--color-accent-text)]">
             MANU FITNESS
           </h1>
-          <p className="mt-6 rounded-[var(--radius-control)] border border-[var(--color-warn-edge)] bg-[var(--color-warn-quiet)] p-4 text-sm text-[var(--color-warn)]">
+          <p className="mt-6 rounded-[var(--radius-control)] border border-[var(--color-warn-edge)] bg-[var(--color-warn-quiet)] p-4 text-sm text-[var(--color-warn-text)]">
             This build has no backend configured. Set <code className="font-mono">VITE_SUPABASE_URL</code>{' '}
             and <code className="font-mono">VITE_SUPABASE_ANON_KEY</code>, or run with{' '}
             <code className="font-mono">VITE_DEMO_MODE=1</code>.

@@ -50,7 +50,7 @@ function StaleBanner() {
   if (warnings.length === 0) return null
 
   return (
-    <div className="border-b border-[var(--color-warn-edge)] bg-[var(--color-warn)]/10 px-4 py-2 text-center text-xs text-[var(--color-warn)]">
+    <div className="border-b border-[var(--color-warn-edge)] bg-[var(--color-warn)]/10 px-4 py-2 text-center text-xs text-[var(--color-warn-text)]">
       {warnings.join(' ')}{' '}
       <NavLink to="/integrations" className="underline underline-offset-2">
         Check integrations
@@ -68,7 +68,7 @@ function DemoBanner() {
   if (!hasDemo) return null
 
   return (
-    <div className="border-b border-[var(--color-danger-edge)] bg-[var(--color-danger)]/10 px-4 py-2 text-center text-xs text-[var(--color-danger)]">
+    <div className="border-b border-[var(--color-danger-edge)] bg-[var(--color-danger)]/10 px-4 py-2 text-center text-xs text-[var(--color-danger-text)]">
       Demo data is loaded. These numbers are generated, not measured.{' '}
       <NavLink to="/settings" className="underline underline-offset-2">
         Remove it
@@ -120,7 +120,7 @@ export function Layout() {
         bg-[var(--color-ink)]/80 backdrop-blur-xl md:block">
         <div className="mx-auto flex max-w-6xl items-center gap-1 px-6 py-2.5">
           <span className="mr-5 flex items-center gap-2 text-sm font-bold tracking-[0.16em]
-            text-[var(--color-accent)]">
+            text-[var(--color-accent-text)]">
             <span
               aria-hidden="true"
               className="h-2 w-2 rounded-full bg-[var(--color-accent)]
@@ -137,7 +137,7 @@ export function Layout() {
                 `rounded-[var(--radius-inner)] px-3 py-1.5 text-sm transition duration-200
                  ease-[cubic-bezier(0.32,0.72,0,1)] ${
                    isActive
-                     ? 'bg-[var(--color-accent-quiet)] font-semibold text-[var(--color-accent)] ' +
+                     ? 'bg-[var(--color-accent-quiet)] font-semibold text-[var(--color-accent-text)] ' +
                        'ring-1 ring-inset ring-[var(--color-accent-dim)]'
                      : 'font-medium text-[var(--color-muted)] hover:bg-[var(--color-inset)] ' +
                        'hover:text-[var(--color-text)]'
@@ -169,7 +169,7 @@ export function Layout() {
         border-b border-[var(--color-edge)] bg-[var(--color-ink)]/80 px-4 py-3
         backdrop-blur-xl md:hidden">
         <span className="flex items-center gap-2 text-xs font-bold tracking-[0.18em]
-          text-[var(--color-accent)]">
+          text-[var(--color-accent-text)]">
           <span
             aria-hidden="true"
             className="h-1.5 w-1.5 rounded-full bg-[var(--color-accent)]
@@ -202,7 +202,7 @@ export function Layout() {
                 `relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]
                  transition duration-200 active:scale-[0.94] ${
                    isActive
-                     ? 'font-semibold text-[var(--color-accent)]'
+                     ? 'font-semibold text-[var(--color-accent-text)]'
                      : 'font-medium text-[var(--color-muted)]'
                  }`
               }
@@ -225,7 +225,7 @@ export function Layout() {
             to="/settings"
             className={`relative flex flex-1 flex-col items-center gap-1 py-2.5 text-[11px]
               transition duration-200 active:scale-[0.94] ${
-                onMore ? 'font-semibold text-[var(--color-accent)]' : 'font-medium text-[var(--color-muted)]'
+                onMore ? 'font-semibold text-[var(--color-accent-text)]' : 'font-medium text-[var(--color-muted)]'
               }`}
           >
             {onMore && (

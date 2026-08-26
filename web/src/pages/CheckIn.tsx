@@ -278,7 +278,7 @@ export function CheckIn() {
             {status && (
               <span
                 className={`text-xs ${
-                  status === 'Saved.' ? 'text-[var(--color-accent)]' : 'text-[var(--color-danger)]'
+                  status === 'Saved.' ? 'text-[var(--color-accent-text)]' : 'text-[var(--color-danger-text)]'
                 }`}
               >
                 {status}
@@ -351,7 +351,7 @@ export function CheckIn() {
             {nutritionStatus && (
               <span
                 className={`text-xs ${
-                  nutritionStatus === 'Saved.' ? 'text-[var(--color-accent)]' : 'text-[var(--color-danger)]'
+                  nutritionStatus === 'Saved.' ? 'text-[var(--color-accent-text)]' : 'text-[var(--color-danger-text)]'
                 }`}
               >
                 {nutritionStatus}
@@ -406,7 +406,7 @@ function RecentEntries() {
                       await api.deleteBodyEntry(e.date)
                       await refresh()
                     }}
-                    className="text-xs text-[var(--color-muted)] hover:text-[var(--color-danger)]"
+                    className="text-xs text-[var(--color-muted)] hover:text-[var(--color-danger-text)]"
                     aria-label={`Delete check-in for ${e.date}`}
                   >
                     Delete

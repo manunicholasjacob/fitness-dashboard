@@ -216,7 +216,7 @@ export function TodayEnergyCard() {
               </p>
             )}
             {!today.isComplete && (
-              <p className="mt-2 text-xs text-[var(--color-warn)]">
+              <p className="mt-2 text-xs text-[var(--color-warn-text)]">
                 {today.rawIntake === null
                   ? 'No calories logged yet, so today counts as zero toward the mission.'
                   : 'Garmin has not synced today, so today counts as zero toward the mission.'}
@@ -249,7 +249,7 @@ export function MorningMissionCard() {
       subtitle={`${formatInt(stats.goal)} steps before ${settings.morningDeadline}`}
       right={
         stats.currentStreak > 0 ? (
-          <span className="tnum rounded-full border border-[var(--color-accent-dim)] px-2 py-1 text-[11px] font-semibold text-[var(--color-accent)]">
+          <span className="tnum rounded-full border border-[var(--color-accent-dim)] px-2 py-1 text-[11px] font-semibold text-[var(--color-accent-text)]">
             {stats.currentStreak} day streak
           </span>
         ) : null
@@ -325,7 +325,7 @@ export function WeightCard() {
           {change7 !== null && (
             <p
               className={`tnum mt-1 text-sm font-semibold ${
-                change7 < 0 ? 'text-[var(--color-accent)]' : 'text-[var(--color-muted)]'
+                change7 < 0 ? 'text-[var(--color-accent-text)]' : 'text-[var(--color-muted)]'
               }`}
             >
               {change7 < 0 ? '↓' : '↑'} {Math.abs(change7).toFixed(1)} lb over 7 days
@@ -372,7 +372,7 @@ export function NutritionCard() {
             <Stat label="Logged calories" value={formatInt(r.rawMfpCalories)} size="lg" />
             <div className="pb-1 text-xs text-[var(--color-muted)]">
               adjusted{' '}
-              <span className="tnum font-semibold text-[var(--color-warn)]">
+              <span className="tnum font-semibold text-[var(--color-warn-text)]">
                 {formatInt(r.rawMfpCalories * settings.intakeAdjustmentFactor)}
               </span>
             </div>
@@ -431,7 +431,7 @@ function GarminFreshness({ through }: { through: string | null }) {
   const stale = minutes >= 90
 
   return (
-    <p className={`mt-3 text-xs ${stale ? 'text-[var(--color-warn)]' : 'text-[var(--color-muted)]'}`}>
+    <p className={`mt-3 text-xs ${stale ? 'text-[var(--color-warn-text)]' : 'text-[var(--color-muted)]'}`}>
       Garmin data runs through {clock}
       {stale && (
         <>

@@ -36,7 +36,7 @@ export function Mission() {
           </div>
         </div>
         {settings.missionTargetOverride !== null && (
-          <p className="mt-3 text-xs text-[var(--color-warn)]">
+          <p className="mt-3 text-xs text-[var(--color-warn-text)]">
             A manual override of {formatInt(settings.missionTargetOverride)} kcal is active, so the
             derivation above is not what the dashboard uses.
           </p>
@@ -109,8 +109,8 @@ export function Mission() {
             <p
               className={`mt-4 rounded-[var(--radius-control)] border p-3 text-sm ${
                 check.verdict === 'aligned'
-                  ? 'border-[var(--color-accent-dim)] text-[var(--color-accent)]'
-                  : 'border-[var(--color-warn-edge)] text-[var(--color-warn)]'
+                  ? 'border-[var(--color-accent-dim)] text-[var(--color-accent-text)]'
+                  : 'border-[var(--color-warn-edge)] text-[var(--color-warn-text)]'
               }`}
             >
               {check.message}
@@ -158,7 +158,7 @@ function Row({ label, value, strong = false }: { label: string; value: string; s
   return (
     <div className="flex items-baseline justify-between gap-4">
       <span className="text-[var(--color-muted)]">{label}</span>
-      <span className={strong ? 'text-lg font-bold text-[var(--color-accent)]' : 'font-semibold'}>{value}</span>
+      <span className={strong ? 'text-lg font-bold text-[var(--color-accent-text)]' : 'font-semibold'}>{value}</span>
     </div>
   )
 }

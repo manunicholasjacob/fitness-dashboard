@@ -97,6 +97,26 @@
   /* Ambient wash behind the hero, so the app's one headline number sits in
      light rather than on flat card colour. */
   --hero-glow: rgb(56 224 123 / 0.09);
+
+  /*
+   * Semantic colours, small-text variants.
+   *
+   * Contrast requirements scale with type size, and a single colour per meaning
+   * cannot serve both a 72px headline figure and an 11px label. Forcing one
+   * value to clear 7:1 at label size drains the life out of the display type;
+   * letting the display value carry the label fails the reading that actually
+   * needs help.
+   *
+   * So each meaning has two: the vivid base for large figures, fills, borders
+   * and graphics, and a -text variant solved to 7:1 for anything set small.
+   * In dark mode the base already clears 7:1, so the two are the same and this
+   * block exists only to keep the names available.
+   */
+  --color-accent-text: #38e07b;
+  --color-warn-text: #f5a524;
+  --color-danger-text: #f58086;
+  --color-info-text: #8fb0ee;
+  --color-estimate-text: #b39ddb;
 }
 
 /*
@@ -172,6 +192,15 @@
       0 14px 32px -14px rgb(24 39 74 / 0.2);
 
     --hero-glow: rgb(31 124 69 / 0.07);
+
+    /* Solved to 7:1 against the page, the darkest ground these sit on. The
+       vivid base tones above stay for display figures and graphics, which are
+       large enough that the large-text threshold is the right one. */
+    --color-accent-text: #165932;
+    --color-warn-text: #69470f;
+    --color-danger-text: #883033;
+    --color-info-text: #284c8e;
+    --color-estimate-text: #56418c;
   }
 }
 

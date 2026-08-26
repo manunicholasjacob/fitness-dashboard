@@ -321,7 +321,7 @@ function ManualActivityForm({ onSaved }: { onSaved: () => Promise<void> }) {
           <div className="flex items-center gap-3">
             <Button type="submit">Save Session</Button>
             {status && (
-              <span className={`text-xs ${status === 'Saved.' ? 'text-[var(--color-accent)]' : 'text-[var(--color-danger)]'}`}>
+              <span className={`text-xs ${status === 'Saved.' ? 'text-[var(--color-accent-text)]' : 'text-[var(--color-danger-text)]'}`}>
                 {status}
               </span>
             )}

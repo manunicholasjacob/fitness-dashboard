@@ -118,7 +118,7 @@ export function PinLock({
         ))}
       </div>
 
-      <p className="mt-4 min-h-10 max-w-[18rem] text-center text-xs text-[var(--color-danger)]">
+      <p className="mt-4 min-h-10 max-w-[18rem] text-center text-xs text-[var(--color-danger-text)]">
         {error ?? ''}
       </p>
 

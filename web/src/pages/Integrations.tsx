@@ -80,7 +80,7 @@ export function Integrations() {
               </div>
 
               {last && last.status !== 'success' && (
-                <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--color-danger-edge)] bg-[var(--color-danger)]/10 p-3 text-xs text-[var(--color-danger)]">
+                <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--color-danger-edge)] bg-[var(--color-danger)]/10 p-3 text-xs text-[var(--color-danger-text)]">
                   <p className="font-semibold">Last run: {last.status}</p>
                   {last.errorMessage && <p className="mt-1 break-words">{last.errorMessage}</p>}
                 </div>
@@ -130,10 +130,10 @@ export function Integrations() {
                       <span
                         className={
                           l.status === 'success'
-                            ? 'text-[var(--color-accent)]'
+                            ? 'text-[var(--color-accent-text)]'
                             : l.status === 'running'
                               ? 'text-[var(--color-muted)]'
-                              : 'text-[var(--color-danger)]'
+                              : 'text-[var(--color-danger-text)]'
                         }
                       >
                         {l.status}
@@ -233,17 +233,17 @@ function ImportPanel({ onDone }: { onDone: () => Promise<void> }) {
       </div>
 
       {status && (
-        <p className={`mt-3 text-xs ${status.startsWith('Imported') ? 'text-[var(--color-accent)]' : 'text-[var(--color-danger)]'}`}>
+        <p className={`mt-3 text-xs ${status.startsWith('Imported') ? 'text-[var(--color-accent-text)]' : 'text-[var(--color-danger-text)]'}`}>
           {status}
         </p>
       )}
 
       {result && result.warnings.length > 0 && (
         <div className="mt-3 rounded-[var(--radius-control)] border border-[var(--color-warn-edge)] bg-[var(--color-warn)]/10 p-3">
-          <p className="text-xs font-semibold text-[var(--color-warn)]">
+          <p className="text-xs font-semibold text-[var(--color-warn-text)]">
             {result.warnings.length} row{result.warnings.length === 1 ? '' : 's'} skipped
           </p>
-          <ul className="mt-1 space-y-0.5 text-xs text-[var(--color-warn)]">
+          <ul className="mt-1 space-y-0.5 text-xs text-[var(--color-warn-text)]">
             {result.warnings.slice(0, 8).map((w, i) => (
               <li key={i}>{w}</li>
             ))}

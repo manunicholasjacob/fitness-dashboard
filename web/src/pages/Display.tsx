@@ -43,7 +43,7 @@ export function Display() {
   return (
     <div className="min-h-screen bg-[var(--color-ink)] p-6 lg:p-10">
       <header className="flex items-baseline justify-between">
-        <h1 className="text-sm font-bold uppercase tracking-[0.3em] text-[var(--color-accent)] lg:text-lg">
+        <h1 className="text-sm font-bold uppercase tracking-[0.3em] text-[var(--color-accent-text)] lg:text-lg">
           Energy Deficit Mission
         </h1>
         <p className="tnum text-sm text-[var(--color-muted)] lg:text-xl">
@@ -121,6 +121,8 @@ function Tile({
   sub?: string
   tone?: 'default' | 'good' | 'bad' | 'muted'
 }) {
+  // Every figure on this screen is display type read from across a room, so
+  // the large-text threshold applies and the vivid tones are the right ones.
   const color = {
     default: 'text-[var(--color-text)]',
     good: 'text-[var(--color-accent)]',

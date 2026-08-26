@@ -80,10 +80,13 @@ export function Stat({
   tone?: 'default' | 'good' | 'bad' | 'muted'
   size?: 'sm' | 'md' | 'lg' | 'xl'
 }) {
+  // Contrast thresholds scale with type size, so the tone does too: display
+  // figures take the vivid colour, anything set small takes the 7:1 variant.
+  const large = size === 'lg' || size === 'xl' || size === 'md'
   const toneClass = {
     default: 'text-[var(--color-text)]',
-    good: 'text-[var(--color-accent)]',
-    bad: 'text-[var(--color-danger)]',
+    good: large ? 'text-[var(--color-accent)]' : 'text-[var(--color-accent-text)]',
+    bad: large ? 'text-[var(--color-danger)]' : 'text-[var(--color-danger-text)]',
     muted: 'text-[var(--color-muted)]',
   }[tone]
 
@@ -186,7 +189,7 @@ export function AdjustmentChain({
       </div>
       <div className="tnum mt-1 flex items-baseline gap-2 text-sm">
         <span className="text-[var(--color-muted)]">Adjustment</span>
-        <span className="font-semibold text-[var(--color-warn)]">x {factor.toFixed(2)}</span>
+        <span className="font-semibold text-[var(--color-warn-text)]">x {factor.toFixed(2)}</span>
       </div>
       <div className="mt-2.5 border-t border-[var(--color-edge)] pt-2.5">
         <div className="tnum flex items-baseline gap-2">
@@ -216,11 +219,11 @@ export function Tag({ kind }: { kind: 'raw' | 'adjusted' | 'estimated' | 'derive
     demo: 'bg-[var(--color-danger)]',
   }[kind]
   const text = {
-    raw: 'text-[var(--color-info)]',
-    adjusted: 'text-[var(--color-warn)]',
-    estimated: 'text-[var(--color-estimate)]',
-    derived: 'text-[var(--color-accent)]',
-    demo: 'text-[var(--color-danger)]',
+    raw: 'text-[var(--color-info-text)]',
+    adjusted: 'text-[var(--color-warn-text)]',
+    estimated: 'text-[var(--color-estimate-text)]',
+    derived: 'text-[var(--color-accent-text)]',
+    demo: 'text-[var(--color-danger-text)]',
   }[kind]
   return (
     <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.06em] ${text}`}>
@@ -253,7 +256,7 @@ export function Button({
       'border border-[var(--color-edge)] bg-[var(--color-card)] text-[var(--color-text)] ' +
       'hover:border-[var(--color-faint)] hover:bg-[var(--color-inset)]',
     danger:
-      'border border-[var(--color-danger-edge)] text-[var(--color-danger)] hover:bg-[var(--color-danger-quiet)]',
+      'border border-[var(--color-danger-edge)] text-[var(--color-danger-text)] hover:bg-[var(--color-danger-quiet)]',
   }[variant]
 
   return (
@@ -297,7 +300,7 @@ export function Field({
       <span className="eyebrow text-[var(--color-muted)]">{label}</span>
       <div className="mt-1.5">{children}</div>
       {error ? (
-        <span role="alert" className="mt-1 block text-xs font-medium text-[var(--color-danger)]">
+        <span role="alert" className="mt-1 block text-xs font-medium text-[var(--color-danger-text)]">
           {error}
         </span>
       ) : (
