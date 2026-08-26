@@ -1,5 +1,18 @@
 # Setup
 
+> **This is already provisioned.** The deployment, the Supabase project, the
+> schema and the account all exist. Keep this document as the reference for
+> rebuilding it, or for standing it up somewhere else.
+>
+> - **Site:** https://manunicholasjacob.com/fitness-dashboard/
+> - **Supabase project:** `qzapbvrcdnxvhserporn`
+> - **Sign in with:** the email and password recorded in `sync/.env`
+>
+> What remains are the two provider logins covered in
+> [SYNC-AGENT.md](SYNC-AGENT.md): setting a Garmin password, and one
+> MyFitnessPal browser sign-in. Run `npm run sync:doctor` at any time to see
+> exactly what is still outstanding.
+
 Roughly 20 minutes end to end. You can stop after Part 1 and have a working dashboard with manual entry.
 
 ---
@@ -108,6 +121,7 @@ TIMEZONE=America/Chicago
 `sync/.env` is gitignored and never leaves your laptop.
 
 ```bash
+npm run sync:doctor    # check every link in the chain first
 npm run sync:garmin    # should pull the last 3 days
 npm run sync:login     # opens a browser: sign in to MyFitnessPal once
 npm run sync:mfp       # should pull the last 3 days of diary totals
@@ -156,7 +170,14 @@ These are the same two values from step 1.4.
 
 Push to `main`, or run the workflow manually from the **Actions** tab. It typechecks, runs the tests, builds, verifies the bundle actually contains your Supabase URL, and publishes.
 
-Your dashboard is at `https://YOURNAME.github.io/fitness-dashboard/`.
+Your dashboard is at https://manunicholasjacob.com/fitness-dashboard/
+
+> Note: because the account-level GitHub Pages custom domain is set on the
+> user site, project pages inherit it. `manunicholasjacob.github.io/fitness-dashboard/`
+> permanently redirects there. To host it off that domain instead, connect the
+> same repository to Cloudflare Pages, which serves it at a `*.pages.dev`
+> address. A `robots.txt` and a `noindex` meta keep it out of search results
+> either way.
 
 ---
 
@@ -175,14 +196,14 @@ Your dashboard is at `https://YOURNAME.github.io/fitness-dashboard/`.
 Point any tablet, monitor, or Raspberry Pi browser at:
 
 ```
-https://YOURNAME.github.io/fitness-dashboard/#/display
+https://manunicholasjacob.com/fitness-dashboard/#/display
 ```
 
 Sign in once on that device. The page is non-interactive, uses oversized type, and refreshes itself every 15 minutes. For a Raspberry Pi kiosk:
 
 ```bash
 chromium-browser --kiosk --noerrdialogs --disable-infobars \
-  "https://YOURNAME.github.io/fitness-dashboard/#/display"
+  "https://manunicholasjacob.com/fitness-dashboard/#/display"
 ```
 
 ---

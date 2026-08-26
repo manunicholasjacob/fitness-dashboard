@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useData } from '../lib/data'
 import { useAuth } from '../lib/auth'
@@ -75,14 +76,41 @@ function DemoBanner() {
   )
 }
 
+const TITLES: Record<string, string> = {
+  '/': 'Dashboard',
+  '/mission': 'Mission',
+  '/activity': 'Activity',
+  '/analytics': 'Analytics',
+  '/check-in': 'Check-In',
+  '/integrations': 'Integrations',
+  '/settings': 'Settings',
+}
+
 export function Layout() {
   const { settings, refreshing } = useData()
   const { signOut } = useAuth()
   const location = useLocation()
   const onMore = MORE.some((m) => m.to === location.pathname)
 
+  // A screen reader announces the document title on navigation, and a static
+  // title makes every route sound identical.
+  useEffect(() => {
+    const page = TITLES[location.pathname] ?? 'Dashboard'
+    document.title = `${page} | Energy Deficit Mission`
+  }, [location.pathname])
+
   return (
     <div className="flex min-h-full flex-col bg-[var(--color-ink)]">
+      {/* Keyboard users should not have to tab through the whole nav to reach
+          the numbers they came for. */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50
+          focus:rounded-[var(--radius-control)] focus:bg-[var(--color-accent)]
+          focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-[var(--color-on-accent)]"
+      >
+        Skip to content
+      </a>
       <DemoBanner />
       <StaleBanner />
 
@@ -133,12 +161,13 @@ export function Layout() {
         )}
       </header>
 
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-4 sm:px-6 md:pb-10">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-4 sm:px-6 md:pb-10">
         <Outlet />
       </main>
 
       {/* Mobile bottom navigation, thumb-reachable and safe-area aware. */}
       <nav
+        aria-label="Primary"
         className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--color-edge)] material bg-[var(--color-surface)]/95 backdrop-blur md:hidden"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >

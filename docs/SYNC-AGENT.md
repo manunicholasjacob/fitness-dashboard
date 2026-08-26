@@ -20,7 +20,7 @@ So there is no OAuth integration to build. What remains is what the agent does: 
 
 ### Garmin (via `garminconnect`)
 
-The library performs the same mobile SSO login the official Garmin app uses and caches the resulting tokens in `sync/.garmin-tokens/`, so a full login happens once rather than daily.
+The library performs the same mobile SSO login the official Garmin app uses and caches the resulting tokens outside the repository (see Where session state lives), so a full login happens once rather than daily.
 
 **Daily:** total, active and resting calories; total steps; steps before your morning deadline; distance; active and intensity minutes; floors; average, resting and max heart rate; sleep duration with deep and REM breakdown and sleep score; average stress; body battery high and low; SpO2; respiration.
 
@@ -42,22 +42,92 @@ The parser is verified against both diary layouts MyFitnessPal uses; see `sync/t
 
 ---
 
+## Signing in with Google
+
+Both services support "Continue with Google", and they land very differently.
+
+**MyFitnessPal: already handled.** The agent drives a real browser against a
+dedicated profile. You sign in once in a visible window, using Google or
+anything else, and the session persists. No password is ever stored or needed.
+
+**Garmin: needs a Garmin password.** The `garminconnect` library authenticates
+against Garmin's own SSO, not Google's. If your Garmin account was created
+through Google sign-in it has no Garmin password, and login fails with a
+generic credential rejection that does not explain why.
+
+The fix is one-time and does not disturb Google sign-in:
+
+1. Go to [connect.garmin.com/signin](https://connect.garmin.com/signin)
+2. Choose **Forgot password**, and set one for your account
+3. Put it in `GARMIN_PASSWORD` in `sync/.env`
+
+Signing in with Google keeps working afterwards; you are adding a second way
+in, not replacing the first.
+
+`npm run sync:doctor` detects this case specifically and prints these steps
+rather than a bare authentication error.
+
+Doing it this way rather than scraping Garmin through the browser is a
+deliberate trade: the library reaches sleep stages, body battery, HRV, training
+readiness and intraday step buckets across 144 endpoints. A page scraper would
+reach a fraction of that and break far more often.
+
+---
+
+## Which browser the agent drives
+
+It prefers a browser you already have, in this order: **Chrome, then Edge, then
+Playwright's bundled Chromium.**
+
+That order exists because of a real failure. The bundled Chromium refuses to
+start on some Windows machines with nothing but `spawn UNKNOWN`; the underlying
+cause is `side-by-side configuration is incorrect`, meaning it needs a Visual
+C++ redistributable that is not installed. Using an already-installed browser
+sidesteps that entirely, and keeps the browser patched without this project
+shipping browser updates.
+
+It always launches with its **own profile directory**, so your everyday Chrome
+windows, tabs and logins are untouched.
+
+---
+
+## Where session state lives
+
+Not in the repository. The browser profile and Garmin tokens live in:
+
+```
+Windows:  %LOCALAPPDATA%\fitness-dashboard-sync\
+macOS:    ~/.local/state/fitness-dashboard-sync/
+Linux:    ~/.local/state/fitness-dashboard-sync/
+```
+
+Two reasons. Chromium cannot open a user-data directory inside a
+OneDrive-synced folder, and this project is commonly checked out under
+`OneDrive\Documents`. And keeping a live login session out of a synced folder
+means no cloud client ever uploads it. Override with `FITSYNC_STATE_DIR`.
+
+---
+
 ## The MyFitnessPal session model
 
 This is the part worth understanding, because it explains a design choice that looks odd at first.
 
 The common approach is `browser_cookie3`, which reads MyFitnessPal's cookie out of your installed browser's cookie store. **On Windows this no longer works with Chrome.** Since Chrome 127, cookies are protected by app-bound encryption, and the only ways around it are the techniques credential stealers use. This agent does not do that.
 
-Instead, Playwright runs its own Chromium against a persistent profile directory at `sync/.mfp-profile/`:
+Instead, Playwright drives a browser against a dedicated persistent profile directory:
 
 1. `npm run sync:login` opens a **visible** window at the MyFitnessPal login page.
-2. You sign in by hand, clearing any captcha or two-factor prompt.
+2. You sign in by hand, with Google or otherwise, clearing any captcha or two-factor prompt.
 3. The session cookie lands in that profile directory.
 4. Every run after that launches **headless** against the same profile and is already signed in.
 
+The login command polls for success rather than waiting for you to press a key,
+so it can be launched from a script or scheduler with no attached terminal. It
+gives you seven minutes and reports whether it saw you get in.
+
 No password is stored by the agent. Nothing decrypts another application's data. Your day-to-day browser is untouched, and you can keep using Chrome normally.
 
-> `sync/.mfp-profile/` holds a live login session. It is gitignored, and you should treat it the way you would treat a saved password.
+> That profile directory holds a live login session. It lives outside the repository, and you should treat it the way you would treat a saved password.
 
 ---
 
@@ -68,8 +138,14 @@ npm run sync           # both providers
 npm run sync:garmin    # Garmin only
 npm run sync:mfp       # MyFitnessPal only
 npm run sync:login     # one-time MyFitnessPal sign-in
+npm run sync:doctor    # check every link in the chain and say what to fix
 npm run sync:status    # recent run history
 ```
+
+**Start with `npm run sync:doctor`.** It verifies configuration, Supabase
+sign-in, the settings row, write access through row-level security, Garmin
+login and data availability, and the MyFitnessPal session, and prints a
+specific remedy under anything that fails.
 
 Useful flags:
 
@@ -135,8 +211,8 @@ Files that must never be committed (all gitignored):
 | Path | Contains |
 | --- | --- |
 | `sync/.env` | Supabase, dashboard and Garmin credentials |
-| `sync/.mfp-profile/` | A live MyFitnessPal session |
-| `sync/.garmin-tokens/` | Garmin OAuth tokens |
+| `%LOCALAPPDATA%\fitness-dashboard-sync\mfp-profile` | A live MyFitnessPal session (outside the repo) |
+| `%LOCALAPPDATA%\fitness-dashboard-sync\garmin-tokens` | Garmin OAuth tokens (outside the repo) |
 
 ---
 
@@ -144,6 +220,15 @@ Files that must never be committed (all gitignored):
 
 **"garminconnect is not installed"**
 `npm run install:sync`
+
+**"spawn UNKNOWN" or "Could not launch a browser"**
+The bundled Chromium needs a Visual C++ redistributable. Install Chrome or
+Edge, which the agent prefers anyway, or install the Microsoft Visual C++
+Redistributable and retry.
+
+**Garmin rejects credentials that you are sure are right**
+Your account is almost certainly federated through Google. See
+[Signing in with Google](#signing-in-with-google) above.
 
 **Garmin login fails with a multi-factor prompt**
 Run `python sync/run_sync.py garmin --verbose` from a terminal you can type into. The library prompts for the one-time code, and the resulting token is cached, so this is once rather than daily.

@@ -20,10 +20,12 @@ interface Db {
   body: Record<string, Record<string, unknown>>
   activities: Record<string, unknown>[]
   syncLogs: SyncLog[]
+  /** Set once the demo history has been generated, so deleting it sticks. */
+  seeded: boolean
 }
 
 function emptyDb(): Db {
-  return { settings: DEFAULT_SETTINGS, daily: {}, body: {}, activities: [], syncLogs: [] }
+  return { settings: DEFAULT_SETTINGS, daily: {}, body: {}, activities: [], syncLogs: [], seeded: false }
 }
 
 function read(): Db {
@@ -209,7 +211,7 @@ export const local: Backend = {
 
   async clearAllData() {
     const db = read()
-    write({ ...emptyDb(), settings: db.settings })
+    write({ ...emptyDb(), settings: db.settings, seeded: true })
   },
 
   async clearDemoData() {
@@ -225,15 +227,27 @@ export const local: Backend = {
   },
 }
 
-/** Seed a plausible history the first time demo mode is opened. */
+/**
+ * Seed a plausible history the first time demo mode is opened.
+ *
+ * Gated on an explicit `seeded` flag rather than "is the table empty", because
+ * the latter silently regenerates the demo data the moment you delete it.
+ */
 export function seedLocalIfEmpty(daily: BulkDailyRow[], body: (Partial<BodyEntry> & { date: string })[], activities: DemoActivityInput[]): boolean {
   const db = read()
-  if (Object.keys(db.daily).length > 0) return false
+  if (db.seeded || Object.keys(db.daily).length > 0) {
+    if (!db.seeded) {
+      db.seeded = true
+      write(db)
+    }
+    return false
+  }
   void local.bulkUpsertDaily(daily)
   void local.bulkUpsertBody(body)
   void local.bulkInsertDemoActivities(activities)
 
   const seeded = read()
+  seeded.seeded = true
   const now = new Date()
   const hoursAgo = (h: number) => new Date(now.getTime() - h * 3_600_000).toISOString()
   seeded.syncLogs = [

@@ -46,11 +46,19 @@ export function MissionCard({ compact = false }: { compact?: boolean }) {
   return (
     <Card accent className="bg-gradient-to-b from-[var(--color-card-raised)] to-[var(--color-card)]">
       <div className="text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[var(--color-muted)]">
           Energy Deficit Mission
+        </h2>
+
+        {/* One spoken sentence for the whole card, so a screen reader gets the
+            state rather than three orphaned numbers. */}
+        <p className="sr-only" aria-live="polite">
+          {`${p.percent.toFixed(1)} percent complete. ${formatInt(p.accumulated)} of ${formatInt(
+            p.target,
+          )} kilocalories accumulated, ${formatInt(p.remaining)} remaining.`}
         </p>
 
-        <p className="tnum mt-3 text-5xl font-bold leading-none text-[var(--color-accent)] sm:text-7xl">
+        <p aria-hidden="true" className="tnum mt-3 text-5xl font-bold leading-none text-[var(--color-accent)] sm:text-7xl">
           {p.percent.toFixed(1)}%
         </p>
 
@@ -100,7 +108,9 @@ export function MissionCard({ compact = false }: { compact?: boolean }) {
             hint={
               projection
                 ? `Estimate at ${formatInt(projection.basis)} kcal/day`
-                : 'Trend too slow or negative to project'
+                : p.completeDays < 3
+                  ? 'Needs a few complete days'
+                  : 'Current trend is too slow or negative to project'
             }
             tone="muted"
           />
