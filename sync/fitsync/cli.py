@@ -156,7 +156,7 @@ def cmd_login(config) -> int:
     print("Opening a browser so you can sign in to MyFitnessPal once.")
     print(f"The session will be saved to: {BROWSER_PROFILE}\n")
     with MfpAdapter(None, headless=False) as mfp:
-        if mfp.interactive_login():
+        if mfp.interactive_login(timeout_seconds=720):
             username = mfp.detect_username()
             print("\nSigned in successfully.")
             if username:

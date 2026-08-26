@@ -93,6 +93,14 @@ class MfpError(RuntimeError):
     pass
 
 
+def _is_closed(exc: Exception) -> bool:
+    """Whether an exception means the browser window went away."""
+    text = str(exc).lower()
+    return "targetclosed" in type(exc).__name__.lower() or any(
+        s in text for s in ("has been closed", "target closed", "browser has been closed")
+    )
+
+
 def _playwright():
     try:
         from playwright.sync_api import sync_playwright
@@ -208,23 +216,46 @@ class MfpAdapter:
         waited = 0
         step = 3
         while waited < timeout_seconds:
-            page.wait_for_timeout(step * 1000)
+            try:
+                page.wait_for_timeout(step * 1000)
+                url = page.url
+            except Exception as exc:  # noqa: BLE001
+                # Closing the window is a perfectly reasonable thing to do, and
+                # it should read as "you closed it", not as a stack trace.
+                if _is_closed(exc):
+                    print(
+                        "\nThe browser window was closed before sign-in finished."
+                        "\nNothing was saved. Run the command again and leave the window"
+                        " open until your diary loads.",
+                        flush=True,
+                    )
+                    return False
+                raise
+
             waited += step
 
             # Google's consent screens are part of the flow, so only a URL that
             # is neither the MFP login nor a Google auth page counts as done.
-            url = page.url
             settled = "/account/login" not in url and "accounts.google.com" not in url
             if settled:
-                page.wait_for_timeout(2500)
-                if "/account/login" not in page.url:
-                    print(f"Signed in after {waited}s.", flush=True)
-                    return True
+                try:
+                    page.wait_for_timeout(2500)
+                    if "/account/login" not in page.url:
+                        print(f"Signed in after {waited}s.", flush=True)
+                        return True
+                except Exception as exc:  # noqa: BLE001
+                    if _is_closed(exc):
+                        # Reaching a signed-in URL and then closing the window is
+                        # a success: the cookie is already on disk.
+                        print("\nWindow closed after sign-in. Session saved.", flush=True)
+                        return True
+                    raise
 
             if waited % 30 == 0:
-                print(f"  still waiting ({waited}s)...", flush=True)
+                remaining = (timeout_seconds - waited) // 60
+                print(f"  still waiting ({waited}s, {remaining} min left)...", flush=True)
 
-        print("Timed out waiting for sign-in.")
+        print("\nTimed out waiting for sign-in. Nothing was saved.")
         return False
 
     # --- data ---------------------------------------------------------------
