@@ -1,17 +1,14 @@
 # Setup
 
-> **This is already provisioned.** The deployment, the Supabase project, the
-> schema and the account all exist. Keep this document as the reference for
-> rebuilding it, or for standing it up somewhere else.
+> **This is already provisioned and running.** Keep this document as the
+> reference for rebuilding it, or for standing it up somewhere else.
 >
-> - **Site:** https://manunicholasjacob.com/fitness-dashboard/
+> - **Site:** https://fitness-dashboard-emv.pages.dev/
 > - **Supabase project:** `qzapbvrcdnxvhserporn`
 > - **Sign in with:** the email and password recorded in `sync/.env`
+> - **Daily sync:** Windows scheduled task `Fitness Dashboard Sync`, 21:00
 >
-> What remains are the two provider logins covered in
-> [SYNC-AGENT.md](SYNC-AGENT.md): setting a Garmin password, and one
-> MyFitnessPal browser sign-in. Run `npm run sync:doctor` at any time to see
-> exactly what is still outstanding.
+> Run `npm run sync:doctor` at any time to check every link in the chain.
 
 Roughly 20 minutes end to end. You can stop after Part 1 and have a working dashboard with manual entry.
 
@@ -115,15 +112,23 @@ APP_EMAIL=you@example.com
 APP_PASSWORD=the-password-from-step-1.3
 GARMIN_EMAIL=you@example.com
 GARMIN_PASSWORD=your-garmin-password
+MFP_USERNAME=your-mfp-username
+MFP_DIARY_KEY=your-diary-sharing-key
 TIMEZONE=America/Chicago
 ```
+
+Two one-time provider steps, both covered in [SYNC-AGENT.md](SYNC-AGENT.md):
+
+- **Garmin:** if you sign in with Google, set a Garmin password via "Forgot
+  password" first. The library uses Garmin's own SSO, not Google's.
+- **MyFitnessPal:** set Settings > Diary Settings > Diary Sharing to "Locked
+  with a Key". No MyFitnessPal login is involved at any point.
 
 `sync/.env` is gitignored and never leaves your laptop.
 
 ```bash
 npm run sync:doctor    # check every link in the chain first
 npm run sync:garmin    # should pull the last 3 days
-npm run sync:login     # opens a browser: sign in to MyFitnessPal once
 npm run sync:mfp       # should pull the last 3 days of diary totals
 npm run sync:status    # confirm both succeeded
 ```
@@ -131,12 +136,12 @@ npm run sync:status    # confirm both succeeded
 Then schedule it daily. On Windows:
 
 ```powershell
-schtasks /create /tn "Fitness Sync" /tr "cmd /c cd /d C:\path\to\fitness-dashboard && npm run sync" /sc daily /st 21:00
+schtasks /create /tn "Fitness Dashboard Sync" /tr "C:\path\to\fitness-dashboard\sync\run_daily.cmd" /sc daily /st 21:00 /f
 ```
 
 ---
 
-## Part 3: Deploy to GitHub Pages
+## Part 3: Deploy
 
 ### 3.1 Push the repository
 
@@ -149,41 +154,39 @@ git remote add origin https://github.com/YOURNAME/fitness-dashboard.git
 git push -u origin main
 ```
 
-The repository can be public. It contains no secrets: `web/.env` and `sync/.env` are gitignored, and your health data lives in Supabase behind a login, not in the repo.
+The repository can be public. It holds no secrets: `web/.env` and `sync/.env` are gitignored, and your health data lives in Supabase behind a login, not in the repo.
 
-> If you name the repository something other than `fitness-dashboard`, no change is needed. The workflow derives the base path from the repository name automatically.
+### 3.2 Why Cloudflare Pages rather than GitHub Pages
 
-### 3.2 Add the build secrets
+GitHub Pages project sites inherit the custom domain configured on the account's *user* site, and there is no way to opt one project out. That put this dashboard on a path under a personal professional domain. Cloudflare Pages gives it its own origin.
 
-**Settings** then **Secrets and variables** then **Actions**. Add two repository secrets:
+### 3.3 Create the Cloudflare project
+
+1. In Cloudflare, create an **API token** with exactly one permission: **Account > Cloudflare Pages > Edit**. Not the broader Workers template.
+2. Create a Pages project named `fitness-dashboard`.
+
+### 3.4 Add the repository secrets
+
+**Settings > Secrets and variables > Actions**, four secrets:
 
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
 
-These are the same two values from step 1.4.
+### 3.5 Deploy
 
-### 3.3 Enable Pages
+Push to `main`. The workflow typechecks, runs the tests, builds, refuses to publish a bundle that is not actually configured or whose asset paths are not root-relative, and deploys.
 
-**Settings** then **Pages**. Under **Source**, choose **GitHub Actions**.
+Your dashboard is at https://fitness-dashboard-emv.pages.dev/
 
-### 3.4 Deploy
-
-Push to `main`, or run the workflow manually from the **Actions** tab. It typechecks, runs the tests, builds, verifies the bundle actually contains your Supabase URL, and publishes.
-
-Your dashboard is at https://manunicholasjacob.com/fitness-dashboard/
-
-> Note: because the account-level GitHub Pages custom domain is set on the
-> user site, project pages inherit it. `manunicholasjacob.github.io/fitness-dashboard/`
-> permanently redirects there. To host it off that domain instead, connect the
-> same repository to Cloudflare Pages, which serves it at a `*.pages.dev`
-> address. A `robots.txt` and a `noindex` meta keep it out of search results
-> either way.
+`_headers` sets the security headers and caching policy; `_redirects` serves the shell for any deep path; `robots.txt` and a `noindex` meta keep it out of search results.
 
 ---
 
 ## Part 4: Install on your iPhone
 
-1. Open the Pages URL in **Safari**. It has to be Safari; Chrome on iOS cannot install PWAs.
+1. Open the site in **Safari**. It has to be Safari; Chrome on iOS cannot install PWAs.
 2. Tap the **Share** button.
 3. **Add to Home Screen**.
 4. Open it from the home screen. It runs full-screen with no browser chrome.
@@ -196,14 +199,14 @@ Your dashboard is at https://manunicholasjacob.com/fitness-dashboard/
 Point any tablet, monitor, or Raspberry Pi browser at:
 
 ```
-https://manunicholasjacob.com/fitness-dashboard/#/display
+https://fitness-dashboard-emv.pages.dev/#/display
 ```
 
 Sign in once on that device. The page is non-interactive, uses oversized type, and refreshes itself every 15 minutes. For a Raspberry Pi kiosk:
 
 ```bash
 chromium-browser --kiosk --noerrdialogs --disable-infobars \
-  "https://manunicholasjacob.com/fitness-dashboard/#/display"
+  "https://fitness-dashboard-emv.pages.dev/#/display"
 ```
 
 ---
@@ -228,6 +231,7 @@ on conflict (user_id) do nothing;
 ```
 
 **The deployed site is a blank page**
+Almost always the base path. Cloudflare Pages serves from `/`, so the build sets `VITE_BASE_PATH=/`. Note that Git Bash rewrites a bare `/` into a Windows path, so use `MSYS_NO_PATHCONV=1` when building by hand there. The publish guard fails the build if asset paths are not root-relative.
 Almost always the base path. Check that the Pages URL matches your repository name. The workflow sets it automatically; if you build locally, set `VITE_BASE_PATH` yourself.
 
 **Deploy fails on "Guard against publishing an unconfigured build"**

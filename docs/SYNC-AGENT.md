@@ -20,7 +20,14 @@ So there is no OAuth integration to build. What remains is what the agent does: 
 
 ### Garmin (via `garminconnect`)
 
-The library performs the same mobile SSO login the official Garmin app uses and caches the resulting tokens outside the repository (see Where session state lives), so a full login happens once rather than daily.
+> If you sign in to Garmin with Google, set a Garmin password first at
+> [connect.garmin.com/signin](https://connect.garmin.com/signin) via "Forgot
+> password". The library talks to Garmin's own SSO, not Google's, so a
+> Google-only account has no password for it to use. Google sign-in keeps
+> working alongside it.
+
+
+The library performs the same mobile SSO login the official Garmin app uses and caches the resulting tokens outside the repository, under `%LOCALAPPDATA%\fitness-dashboard-sync\garmin-tokens`, so a full login happens once rather than daily.
 
 **Daily:** total, active and resting calories; total steps; steps before your morning deadline; distance; active and intensity minutes; floors; average, resting and max heart rate; sleep duration with deep and REM breakdown and sleep score; average stress; body battery high and low; SpO2; respiration.
 
@@ -32,102 +39,51 @@ Activity types are mapped onto the app's categories (running, walking, cycling, 
 
 Garmin exposes intraday step buckets in 15-minute intervals, timestamped in UTC. The agent converts each bucket into your configured timezone and sums those ending at or before the deadline. This is a real measurement, not an estimate.
 
-### MyFitnessPal (via Playwright)
+### MyFitnessPal (via diary sharing)
 
-Calories, protein, carbohydrates, fat, fibre, sugar, and sodium, taken from the day's totals row.
+Calories, protein, carbohydrates, fat, fibre, sugar and sodium, per day.
 
-It reads `myfitnesspal.com/reports/printable_diary/...`, which is a plain server-rendered table built for printing. That page changes far less often than the React app, and the extractor matches columns by header name rather than position, so a reordered or added column does not break it.
+**No browser and no login.** Three approaches were tried before this one:
 
-The parser is verified against both diary layouts MyFitnessPal uses; see `sync/tests/README.md`.
+- *Continue with Google* fails. Google refuses OAuth sign-in from automated
+  browsers and says so: "This browser or app may not be secure."
+- *Email and password* fails. The login form is behind a Cloudflare Turnstile
+  bot check that fingerprints the browser environment, so it rejects the
+  attempt no matter who types the password. Bot checks are not defeated here.
+- *Scraping the printable diary HTML* fails. That page renders its table
+  client-side, so a plain fetch returns an empty shell and every day looks
+  unlogged.
 
----
+What works is the feature MyFitnessPal built for exactly this purpose:
+**Settings > Diary Settings > Diary Sharing > "Locked with a Key"**. The key is
+a sharing key, not an account credential; it grants read access to the diary
+and nothing else. The page fetches its data from a JSON endpoint, and the agent
+calls that endpoint directly.
 
-## Signing in with Google
+That is better than scraping would have been: structured figures rather than
+parsed layout, one request for a whole date range, and nothing that expires.
 
-Both services support "Continue with Google", and they land very differently.
+#### Setting it up
 
-**MyFitnessPal: already handled.** The agent drives a real browser against a
-dedicated profile. You sign in once in a visible window, using Google or
-anything else, and the session persists. No password is ever stored or needed.
+1. In MyFitnessPal: **Settings > Diary Settings > Diary Sharing**
+2. Choose **"Locked with a Key"** and set a key.
+   "Public" also works but makes the diary readable by anyone with the URL.
+3. In `sync/.env`, set `MFP_USERNAME` (the last part of your profile URL) and
+   `MFP_DIARY_KEY`.
 
-**Garmin: needs a Garmin password.** The `garminconnect` library authenticates
-against Garmin's own SSO, not Google's. If your Garmin account was created
-through Google sign-in it has no Garmin password, and login fails with a
-generic credential rejection that does not explain why.
+#### Servings, and why there are tests for it
 
-The fix is one-time and does not disturb Google sign-in:
+Each diary entry carries two sets of figures: the food's, which are per serving
+unit, and the entry's, which are what was actually eaten. Half a jar of sauce is
+45 kcal at the entry level and 90 at the food level; 250 g of chicken is 500
+against a per-gram 2.
 
-1. Go to [connect.garmin.com/signin](https://connect.garmin.com/signin)
-2. Choose **Forgot password**, and set one for your account
-3. Put it in `GARMIN_PASSWORD` in `sync/.env`
+The agent reads the entry-level figures. Reading the wrong ones would silently
+double or halve intake, and intake feeds straight into the mission total, so
+`sync/tests/test_mfp.py` pins the behaviour. Run it with `npm run test:sync`.
 
-Signing in with Google keeps working afterwards; you are adding a second way
-in, not replacing the first.
-
-`npm run sync:doctor` detects this case specifically and prints these steps
-rather than a bare authentication error.
-
-Doing it this way rather than scraping Garmin through the browser is a
-deliberate trade: the library reaches sleep stages, body battery, HRV, training
-readiness and intraday step buckets across 144 endpoints. A page scraper would
-reach a fraction of that and break far more often.
-
----
-
-## Which browser the agent drives
-
-It prefers a browser you already have, in this order: **Chrome, then Edge, then
-Playwright's bundled Chromium.**
-
-That order exists because of a real failure. The bundled Chromium refuses to
-start on some Windows machines with nothing but `spawn UNKNOWN`; the underlying
-cause is `side-by-side configuration is incorrect`, meaning it needs a Visual
-C++ redistributable that is not installed. Using an already-installed browser
-sidesteps that entirely, and keeps the browser patched without this project
-shipping browser updates.
-
-It always launches with its **own profile directory**, so your everyday Chrome
-windows, tabs and logins are untouched.
-
----
-
-## Where session state lives
-
-Not in the repository. The browser profile and Garmin tokens live in:
-
-```
-Windows:  %LOCALAPPDATA%\fitness-dashboard-sync\
-macOS:    ~/.local/state/fitness-dashboard-sync/
-Linux:    ~/.local/state/fitness-dashboard-sync/
-```
-
-Two reasons. Chromium cannot open a user-data directory inside a
-OneDrive-synced folder, and this project is commonly checked out under
-`OneDrive\Documents`. And keeping a live login session out of a synced folder
-means no cloud client ever uploads it. Override with `FITSYNC_STATE_DIR`.
-
----
-
-## The MyFitnessPal session model
-
-This is the part worth understanding, because it explains a design choice that looks odd at first.
-
-The common approach is `browser_cookie3`, which reads MyFitnessPal's cookie out of your installed browser's cookie store. **On Windows this no longer works with Chrome.** Since Chrome 127, cookies are protected by app-bound encryption, and the only ways around it are the techniques credential stealers use. This agent does not do that.
-
-Instead, Playwright drives a browser against a dedicated persistent profile directory:
-
-1. `npm run sync:login` opens a **visible** window at the MyFitnessPal login page.
-2. You sign in by hand, with Google or otherwise, clearing any captcha or two-factor prompt.
-3. The session cookie lands in that profile directory.
-4. Every run after that launches **headless** against the same profile and is already signed in.
-
-The login command polls for success rather than waiting for you to press a key,
-so it can be launched from a script or scheduler with no attached terminal. It
-gives you seven minutes and reports whether it saw you get in.
-
-No password is stored by the agent. Nothing decrypts another application's data. Your day-to-day browser is untouched, and you can keep using Chrome normally.
-
-> That profile directory holds a live login session. It lives outside the repository, and you should treat it the way you would treat a saved password.
+An unlogged day returns nothing rather than zero, so it stays *incomplete* and
+contributes nothing to the mission, rather than counting as a free deficit.
 
 ---
 
@@ -137,14 +93,14 @@ No password is stored by the agent. Nothing decrypts another application's data.
 npm run sync           # both providers
 npm run sync:garmin    # Garmin only
 npm run sync:mfp       # MyFitnessPal only
-npm run sync:login     # one-time MyFitnessPal sign-in
+npm run test:sync      # tests for the nutrition summariser
 npm run sync:doctor    # check every link in the chain and say what to fix
 npm run sync:status    # recent run history
 ```
 
 **Start with `npm run sync:doctor`.** It verifies configuration, Supabase
 sign-in, the settings row, write access through row-level security, Garmin
-login and data availability, and the MyFitnessPal session, and prints a
+login and data availability, and the MyFitnessPal diary, and prints a
 specific remedy under anything that fails.
 
 Useful flags:
@@ -167,9 +123,9 @@ Or set `HEADLESS=0` in `sync/.env` to watch the browser drive MyFitnessPal, whic
 ### Windows
 
 ```powershell
-schtasks /create /tn "Fitness Sync" ^
-  /tr "cmd /c cd /d C:\path\to\fitness-dashboard && npm run sync" ^
-  /sc daily /st 21:00
+schtasks /create /tn "Fitness Dashboard Sync" ^
+  /tr "C:\path\to\fitness-dashboard\sync\run_daily.cmd" ^
+  /sc daily /st 21:00 /f
 ```
 
 Evening works better than morning: your food log is complete by then, whereas at 7am the previous day may still be missing dinner. The three-day backfill window means the morning's Garmin data still arrives the following evening.
@@ -179,7 +135,7 @@ Check it ran: `schtasks /query /tn "Fitness Sync"`
 ### macOS or Linux
 
 ```cron
-0 21 * * * cd /path/to/fitness-dashboard && /usr/bin/npm run sync >> /tmp/fitness-sync.log 2>&1
+0 21 * * * cd /path/to/fitness-dashboard && /usr/bin/python sync/run_sync.py all >> /tmp/fitness-sync.log 2>&1
 ```
 
 ---
@@ -211,8 +167,10 @@ Files that must never be committed (all gitignored):
 | Path | Contains |
 | --- | --- |
 | `sync/.env` | Supabase, dashboard and Garmin credentials |
-| `%LOCALAPPDATA%\fitness-dashboard-sync\mfp-profile` | A live MyFitnessPal session (outside the repo) |
 | `%LOCALAPPDATA%\fitness-dashboard-sync\garmin-tokens` | Garmin OAuth tokens (outside the repo) |
+| `%LOCALAPPDATA%\fitness-dashboard-sync\sync.log` | Daily run log |
+
+MyFitnessPal keeps no local state at all: the diary key is read from `sync/.env` on each run and nothing is cached.
 
 ---
 
@@ -236,8 +194,8 @@ Run `python sync/run_sync.py garmin --verbose` from a terminal you can type into
 **Garmin sync suddenly stops working**
 Garmin changed something on their side. The library is actively maintained and these breakages are typically fixed within days: `pip install --upgrade garminconnect`.
 
-**"The saved MyFitnessPal session has expired"**
-Exactly what it says. `npm run sync:login` again. Expect this every few months.
+**MyFitnessPal returns nothing for days you know you logged**
+Check `MFP_DIARY_KEY` against Settings > Diary Settings > Diary Sharing, exactly as typed there. A wrong key is reported as such rather than as an empty diary.
 
 **"Could not determine your MyFitnessPal username"**
 Set it explicitly in `sync/.env`. It is the last part of your profile URL, `myfitnesspal.com/profile/YOUR_USERNAME`.
