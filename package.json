@@ -2,6 +2,7 @@
   "name": "fitness-dashboard",
   "private": true,
   "version": "1.0.0",
+  "license": "MIT",
   "description": "Personal energy-deficit mission control dashboard",
   "scripts": {
     "dev": "npm run dev --prefix web",
