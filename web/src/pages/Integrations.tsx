@@ -208,7 +208,7 @@ function ImportPanel({ onDone }: { onDone: () => Promise<void> }) {
             accept=".csv,text/csv"
             disabled={busy}
             onChange={(e) => void handle(e, 'garmin')}
-            className="mt-1.5 block w-full text-xs text-[var(--color-muted)] file:mr-3 file:min-h-10 file:rounded-[var(--radius-control)] file:border-0 file:bg-[var(--color-edge)] file:px-4 file:text-xs file:font-semibold file:text-[var(--color-text)]"
+            className="mt-1.5 block w-full text-xs text-[var(--color-muted)] file:mr-3 file:min-h-11 file:rounded-[var(--radius-control)] file:border-0 file:bg-[var(--color-edge)] file:px-4 file:text-xs file:font-semibold file:text-[var(--color-text)]"
           />
           <span className="mt-1 block text-xs text-[var(--color-muted)]">
             Recognises Date, Steps, Calories, Distance and heart-rate columns.
@@ -224,7 +224,7 @@ function ImportPanel({ onDone }: { onDone: () => Promise<void> }) {
             accept=".csv,text/csv"
             disabled={busy}
             onChange={(e) => void handle(e, 'mfp')}
-            className="mt-1.5 block w-full text-xs text-[var(--color-muted)] file:mr-3 file:min-h-10 file:rounded-[var(--radius-control)] file:border-0 file:bg-[var(--color-edge)] file:px-4 file:text-xs file:font-semibold file:text-[var(--color-text)]"
+            className="mt-1.5 block w-full text-xs text-[var(--color-muted)] file:mr-3 file:min-h-11 file:rounded-[var(--radius-control)] file:border-0 file:bg-[var(--color-edge)] file:px-4 file:text-xs file:font-semibold file:text-[var(--color-text)]"
           />
           <span className="mt-1 block text-xs text-[var(--color-muted)]">
             Nutrition summary CSV. Multiple rows per date are summed.

@@ -3,9 +3,15 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
-// GitHub Pages serves the app from /<repo>/, so the base path must match the
-// repository name. Override with VITE_BASE_PATH when self-hosting at a root domain.
-const base = process.env.VITE_BASE_PATH ?? '/fitness-dashboard/'
+// The app is served from the root on Cloudflare Pages, so that is the default.
+//
+// This used to default to '/fitness-dashboard/' for GitHub Pages, which was
+// never actually used and made the wrong build the easy one to produce: a build
+// without VITE_BASE_PATH set looks fine, deploys, and then every /assets/*
+// request returns index.html because the paths point at a directory that does
+// not exist. The CI guard catches it, but the default should not be the broken
+// one. Set VITE_BASE_PATH=/<repo>/ if this is ever hosted under a subpath.
+const base = process.env.VITE_BASE_PATH ?? '/'
 
 export default defineConfig({
   base,

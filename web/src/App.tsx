@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './lib/auth'
 import { DataProvider } from './lib/data'
 import { isUnlocked } from './lib/pin'
 import { isConfigured } from './lib/supabase'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { Layout } from './components/Layout'
 import { PinLock } from './pages/PinLock'
 import { Dashboard } from './pages/Dashboard'
@@ -100,18 +101,25 @@ function Shell() {
 
   return (
     <DataProvider>
-      <AppRoutes />
+      <ErrorBoundary>
+        <AppRoutes />
+      </ErrorBoundary>
     </DataProvider>
   )
 }
 
 export default function App() {
   return (
-    <AuthProvider>
-      {/* HashRouter, because static hosts cannot rewrite deep links to index.html. */}
-      <HashRouter>
-        <Shell />
-      </HashRouter>
-    </AuthProvider>
+    // Outermost, so it also catches a failure in the providers or the lock
+    // screen. A crash there would otherwise leave no way to reach the app at
+    // all, and the recovery screen needs no context of its own.
+    <ErrorBoundary>
+      <AuthProvider>
+        {/* HashRouter, because static hosts cannot rewrite deep links to index.html. */}
+        <HashRouter>
+          <Shell />
+        </HashRouter>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }

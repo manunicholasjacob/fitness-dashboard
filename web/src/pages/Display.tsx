@@ -67,10 +67,14 @@ export function Display() {
           {!kiosk && (
             <NavLink
               to="/"
-              className="rounded-full px-3 py-1 text-xs text-[var(--color-faint)] transition
-                duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--color-card)]
-                hover:text-[var(--color-text)] focus-visible:text-[var(--color-text)]
-                lg:text-sm"
+              // --color-muted, not --color-faint. Faint is the borders-only tier
+              // and lands at 4.40:1 on the light page, which is this app's only
+              // WCAG AA text failure. Quiet is a job for size and weight here,
+              // not for a tone that cannot carry text.
+              className="rounded-full px-3 py-1 text-xs font-medium text-[var(--color-muted)]
+                transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]
+                hover:bg-[var(--color-card)] hover:text-[var(--color-text)]
+                focus-visible:text-[var(--color-text)] lg:text-sm"
             >
               Exit
             </NavLink>
@@ -79,7 +83,10 @@ export function Display() {
       </header>
 
       <section className="mt-8 text-center lg:mt-12">
-        <p className="tnum text-[22vw] font-bold leading-[0.85] text-[var(--color-accent)] lg:text-[16rem]">
+        {/* accent-text rather than accent: on the page ground the vivid accent
+            measures 4.40:1, and this app holds large text to 4.5:1. Across a
+            room the difference is invisible; in the audit it is a failure. */}
+        <p className="tnum text-[22vw] font-bold leading-[0.85] text-[var(--color-accent-text)] lg:text-[16rem]">
           {progress.percent.toFixed(1)}
           <span className="text-[8vw] lg:text-[6rem]">%</span>
         </p>

@@ -165,7 +165,9 @@ export function ActivityPage() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as ActivityType | 'all')}
-            className="rounded-lg border border-[var(--color-edge)] bg-[var(--color-inset)] px-2 py-1 text-xs text-[var(--color-text)]"
+            className="min-h-11 rounded-[var(--radius-inner)] border border-[var(--color-edge)]
+              bg-[var(--color-inset)] px-2.5 text-xs text-[var(--color-text)] transition
+              duration-200 hover:border-[var(--color-faint)]"
             aria-label="Filter by activity type"
           >
             <option value="all">All types</option>
@@ -200,14 +202,26 @@ export function ActivityPage() {
                       {new Date(a.startTime).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </td>
                     <td className="px-2 py-2">
-                      {/* Editable so a miscategorised Garmin import can be fixed in place. */}
+                      {/*
+                       * Editable so a miscategorised Garmin import can be fixed
+                       * in place.
+                       *
+                       * It used to be a transparent 90x22 box that only revealed
+                       * itself on hover, which on a phone means never: an
+                       * unmarked control, under the touch minimum, writing to
+                       * the database on change. It now carries a visible border
+                       * and a 44px height like every other control.
+                       */}
                       <select
                         value={a.activityType}
                         onChange={async (e) => {
                           await api.updateActivityType(a.id, e.target.value)
                           await refresh()
                         }}
-                        className="rounded border border-transparent bg-transparent text-sm hover:border-[var(--color-edge)]"
+                        className="min-h-11 w-full rounded-[var(--radius-inner)]
+                          border border-[var(--color-edge)] bg-[var(--color-inset)] px-2 text-sm
+                          text-[var(--color-text)] transition duration-200
+                          hover:border-[var(--color-faint)]"
                         aria-label={`Type for activity on ${a.startTime}`}
                       >
                         {Object.entries(ACTIVITY_LABELS).map(([k, label]) => (

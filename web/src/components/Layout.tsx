@@ -226,8 +226,9 @@ export function Layout() {
             <span className="text-xs text-[var(--color-muted)]">{settings.displayName}</span>
             <button
               onClick={() => void signOut()}
-              className="rounded-full px-2.5 py-1 text-xs text-[var(--color-muted)] transition
-                duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--color-inset)]
+              className="flex min-h-8 items-center rounded-full px-3 text-xs
+                text-[var(--color-muted)] transition duration-200
+                ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--color-inset)]
                 hover:text-[var(--color-text)] active:scale-[0.97]"
             >
               Sign out

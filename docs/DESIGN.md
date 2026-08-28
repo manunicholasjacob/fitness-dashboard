@@ -126,6 +126,34 @@ rather than craft:
 The nested-enclosure idea was kept where there is a real container to enclose:
 the keypad tray, and the navigation islands.
 
+## Failure is a designed state
+
+Three of the worst defects found in review were not ugly, they were confident:
+
+- **A failed load painted a healthy empty dashboard.** `error` was set on every
+  fetch failure and read by nothing, so a dead connection produced "No data for
+  today yet" and a hero reading 0.0% of 84,000. Unknown is not zero, and the one
+  number this product exists to carry is the one it must never guess at. There
+  is an error banner now, and the hero renders `--` when the load failed with
+  nothing cached.
+- **A stale chunk produced a white screen.** Every route except the dashboard is
+  lazy, and this is a PWA: a phone can hold an index.html from last week naming
+  chunks a new deploy has renamed. That is not an exotic failure, it is the
+  ordinary consequence of shipping an update. `ErrorBoundary` recognises the
+  chunk-load errors specifically, says a newer version is available, and clears
+  the service worker on the way to reloading.
+- **`/display` had no exit.** Zero anchors, outside the layout, installed to a
+  home screen with no back button. A kiosk is a mode, and a mode needs a door.
+
+## Touch targets are a floor, not an aspiration
+
+`Button` and `inputClass` carry `min-h-11`, but bare `<button className="text-xs">`
+bypasses both, and that is where every violation was: a 36x16 Delete with no
+confirm, a 22px-tall row select that was invisible until hover and wrote to the
+database on change, chip rows at 36px. `.tap` and `.tap-inline` exist for the
+cases where padding to 44px would loosen the row: the hit area grows, the visual
+box does not.
+
 ## Things that are deliberate
 
 - **No in-app theme switch.** The app follows the system appearance. An

@@ -192,7 +192,9 @@ export function CheckIn() {
             value={date}
             max={todayIso()}
             onChange={(e) => setDate(e.target.value)}
-            className="rounded-lg border border-[var(--color-edge)] bg-[var(--color-inset)] px-2 py-1 text-xs text-[var(--color-text)]"
+            className="min-h-11 rounded-[var(--radius-inner)] border border-[var(--color-edge)]
+              bg-[var(--color-inset)] px-2.5 text-xs text-[var(--color-text)] transition
+              duration-200 hover:border-[var(--color-faint)]"
             aria-label="Check-in date"
           />
         }
