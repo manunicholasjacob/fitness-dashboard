@@ -27,19 +27,27 @@ Two planning assumptions sit at the centre of the model:
 
 | Source | Assumption | Factor | Reasoning |
 | --- | --- | --- | --- |
-| Garmin | Over-reports expenditure | **x 0.90** | Wrist-based calorie estimates are consistently generous |
+| Garmin | Taken as reported | **x 1.00** | Retired 28 Aug 2026, see below |
 | MyFitnessPal | Under-reports intake | **x 1.10** | Logged food misses oil, portion drift, and untracked bites |
+
+The Garmin correction ran at 0.85, then 0.90, on the theory that wrist-based
+estimates are generous. The theory is probably right; the specific number was
+never calibrated against anything. Stacking a second unmeasured error on top of
+the first made every figure an estimate of an estimate, so it is off. The
+setting still exists, and the Mission page's model check still reports the
+multiplier that would reconcile predicted loss against the scale, so it can come
+back with evidence behind it instead of a guess.
 
 ```
 Garmin reported:      2,800 kcal
-Adjustment:           x 0.90
-Adjusted expenditure: 2,520 kcal
+Adjustment:           none
+Expenditure:          2,800 kcal
 
 MyFitnessPal logged:  2,000 kcal
 Adjustment:           x 1.10
 Adjusted intake:      2,200 kcal
 
-Today's adjusted deficit:  320 kcal
+Today's adjusted deficit:  600 kcal
 ```
 
 The design system, including how contrast is solved and verified, is written up in **[docs/DESIGN.md](docs/DESIGN.md)**.
@@ -56,7 +64,7 @@ It does **not** apply that multiplier. An automatic feedback loop between a nois
 
 The database stores **raw source data only**. There is no `adjusted_expenditure` column, no `daily_deficit` column, and no stored cumulative total. Every adjusted figure is computed at read time from your current settings.
 
-The Garmin factor moved from 0.85 to 0.90 on 26 August 2026 and every day of history repriced on the next page load, with not one stored row modified. That property is enforced by construction, and covered by a test.
+The Garmin factor moved 0.85 to 0.90 on 26 August 2026 and then to 1.00 on 28 August, and every day of history repriced on the next page load both times, with not one stored row modified. That property is enforced by construction, and covered by a test.
 
 ### Incomplete days count as zero
 

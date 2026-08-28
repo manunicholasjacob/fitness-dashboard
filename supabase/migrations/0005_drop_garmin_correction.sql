@@ -1,0 +1,22 @@
+-- The Garmin correction is retired: the factor becomes 1.0, meaning Garmin's
+-- expenditure is taken as reported.
+--
+-- It ran at 0.85, then 0.90, on the theory that wrist-based estimates are
+-- generous. The theory is probably right, but the specific number was never
+-- calibrated against anything, so it stacked a second unmeasured error on top
+-- of the first and made every figure in the app an estimate of an estimate.
+--
+-- The column stays. This is a preference with a real argument on both sides,
+-- and the Mission page's model check still reports the multiplier that would
+-- reconcile predicted loss against the scale, so a correction can be
+-- reintroduced with evidence rather than a guess.
+--
+-- As with 0004, only the default moves. Existing rows are a chosen value and a
+-- migration has no business rewriting them; the live account was updated
+-- separately.
+--
+-- No stored figure changes either. Only raw source data is persisted and every
+-- adjusted number is derived at read time, so history reprices on the next
+-- page load without a row being touched.
+alter table public.app_settings
+  alter column garmin_adjustment_factor set default 1.0;

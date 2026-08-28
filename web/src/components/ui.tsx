@@ -188,25 +188,44 @@ export function AdjustmentChain({
   unit?: string
 }) {
   const fmt = (n: number | null) => (n === null ? '--' : Math.round(n).toLocaleString('en-US'))
+
+  // A factor of exactly 1 is not an adjustment, and drawing "x 1.00" above a
+  // figure identical to the one above it is a step that claims work was done.
+  // When there is no correction the chain collapses to the reported number.
+  const adjusts = factor !== 1
+
   return (
     <div className="rounded-[var(--radius-control)] bg-[var(--color-inset)] p-3.5
       ring-1 ring-inset ring-[var(--color-edge)]">
       <div className="eyebrow text-[var(--color-muted)]">{label}</div>
-      <div className="tnum mt-2 flex items-baseline gap-2 text-sm">
-        <span className="text-[var(--color-muted)]">Reported</span>
-        <span className="font-semibold">{fmt(raw)}</span>
-      </div>
-      <div className="tnum mt-1 flex items-baseline gap-2 text-sm">
-        <span className="text-[var(--color-muted)]">Adjustment</span>
-        <span className="font-semibold text-[var(--color-warn-text)]">x {factor.toFixed(2)}</span>
-      </div>
-      <div className="mt-2.5 border-t border-[var(--color-edge)] pt-2.5">
-        <div className="tnum flex items-baseline gap-2">
-          <span className="text-xs text-[var(--color-muted)]">Adjusted</span>
-          <span className="text-xl font-bold tracking-[-0.02em]">{fmt(adjusted)}</span>
-          <span className="text-xs text-[var(--color-muted)]">{unit}</span>
+
+      {adjusts ? (
+        <>
+          <div className="tnum mt-2 flex items-baseline gap-2 text-sm">
+            <span className="text-[var(--color-muted)]">Reported</span>
+            <span className="font-semibold">{fmt(raw)}</span>
+          </div>
+          <div className="tnum mt-1 flex items-baseline gap-2 text-sm">
+            <span className="text-[var(--color-muted)]">Adjustment</span>
+            <span className="font-semibold text-[var(--color-warn-text)]">x {factor.toFixed(2)}</span>
+          </div>
+          <div className="mt-2.5 border-t border-[var(--color-edge)] pt-2.5">
+            <div className="tnum flex items-baseline gap-2">
+              <span className="text-xs text-[var(--color-muted)]">Adjusted</span>
+              <span className="text-xl font-bold tracking-[-0.02em]">{fmt(adjusted)}</span>
+              <span className="text-xs text-[var(--color-muted)]">{unit}</span>
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="mt-2">
+          <div className="tnum flex items-baseline gap-2">
+            <span className="text-xl font-bold tracking-[-0.02em]">{fmt(raw)}</span>
+            <span className="text-xs text-[var(--color-muted)]">{unit}</span>
+          </div>
+          <p className="mt-1 text-xs text-[var(--color-muted)]">As reported, no adjustment</p>
         </div>
-      </div>
+      )}
     </div>
   )
 }

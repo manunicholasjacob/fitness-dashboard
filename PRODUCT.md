@@ -32,17 +32,22 @@ added to it or took from it.
 
 Two things a neighboring app could not truthfully copy:
 
-1. **It states its assumptions and shows the arithmetic.** Garmin over-reports
-   expenditure and logged intake under-reports, so the model applies x0.90 and
-   x1.10. Every figure in the UI is labelled `raw`, `adjusted`, `estimated`, or
-   `derived`, and the raw to factor to adjusted chain is drawn rather than
-   collapsed into one number.
+1. **It states its assumptions and shows the arithmetic.** Logged intake
+   under-reports, so the model applies x1.10. Every figure in the UI is labelled
+   `raw`, `adjusted`, `estimated`, or `derived`, and the raw to factor to
+   adjusted chain is drawn rather than collapsed into one number. Where a factor
+   is 1 the chain collapses to the reported figure rather than drawing a step
+   that does nothing.
+
+   The Garmin correction was retired on 28 Aug 2026 at the owner's request: it
+   was doing more harm than good, because a factor nobody could calibrate is a
+   second unmeasured error stacked on the first.
 2. **The database stores raw source data only.** There is no
    `adjusted_expenditure` column, no `daily_deficit`, no stored cumulative
    total. Every adjusted figure is computed at read time from current settings,
    so changing a factor reprices all of history without mutating a row. The
-   Garmin factor moved from 0.85 to 0.90 on 26 Aug 2026 and every day repriced
-   on the next page load.
+   Garmin factor moved 0.85 to 0.90 on 26 Aug 2026 and then to 1.00 on 28 Aug;
+   both times every day repriced on the next page load.
 
 ## Operating Context
 

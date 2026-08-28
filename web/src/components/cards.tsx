@@ -552,6 +552,126 @@ export function PeriodDeficitCard() {
   )
 }
 
+/**
+ * The last seven days, one row each.
+ *
+ * The rollup above answers "how much" over a window; this answers "which day".
+ * Those are different questions, and the second is the one asked when a total
+ * looks wrong: it is the only view that shows *where* the missing days are
+ * rather than reporting that some exist.
+ *
+ * Steps are here too because expenditure without them is hard to sanity-check:
+ * a 3,000 kcal day on 2,000 steps usually means the watch double-counted a
+ * workout, and that is visible in one glance across a column.
+ */
+export function RecentDaysCard() {
+  const { days, settings } = useData()
+
+  // Seven rows ending yesterday. Today is excluded deliberately: it is still
+  // accumulating and already has a card of its own, and a part-finished day
+  // sitting in a column of finished ones invites the wrong comparison.
+  const window = Array.from({ length: 7 }, (_, i) => daysAgoIso(i + 1))
+  const rows = window
+    .map((iso) => days.find((d) => d.date === iso) ?? null)
+    .map((d, i) => ({ iso: window[i], day: d }))
+
+  const withData = rows.filter((r) => r.day && (r.day.rawExpenditure !== null || r.day.rawIntake !== null))
+  if (withData.length === 0) {
+    return (
+      <Card title="Last 7 Days" right={<Tag kind="derived" />}>
+        <EmptyState
+          title="No days to show yet"
+          body="Once Garmin has synced a full day it will appear here with its deficit."
+        />
+      </Card>
+    )
+  }
+
+  const label = (iso: string) => {
+    if (iso === daysAgoIso(1)) return 'Yesterday'
+    return new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+  }
+
+  return (
+    <Card
+      title="Last 7 Days"
+      subtitle="Each day's burn, intake and the deficit that came out of them"
+      right={<Tag kind="derived" />}
+    >
+      <div className="-mx-2 min-w-0 overflow-x-auto">
+        <table className="w-full min-w-[440px] text-sm">
+          <thead>
+            <tr className="eyebrow text-left text-[var(--color-muted)]">
+              <th className="px-2 pb-2 font-semibold">Day</th>
+              <th className="px-2 pb-2 text-right font-semibold">Burned</th>
+              <th className="px-2 pb-2 text-right font-semibold">Eaten</th>
+              <th className="px-2 pb-2 text-right font-semibold">Steps</th>
+              <th className="px-2 pb-2 text-right font-semibold">Deficit</th>
+            </tr>
+          </thead>
+          <tbody className="tnum">
+            {rows.map(({ iso, day }) => {
+              const burned = day?.adjustedExpenditure ?? null
+              const eaten = day?.adjustedIntake ?? null
+              const balance = day?.adjustedBalance ?? null
+              const steps = day?.raw.stepsTotal ?? null
+
+              return (
+                <tr key={iso} className="border-t border-[var(--color-edge)]">
+                  <td className="px-2 py-2.5 text-[var(--color-muted)]">{label(iso)}</td>
+                  <td className="px-2 py-2.5 text-right font-semibold">
+                    {burned === null ? <Missing /> : formatInt(burned)}
+                  </td>
+                  <td className="px-2 py-2.5 text-right">
+                    {eaten === null ? <Missing /> : formatInt(eaten)}
+                  </td>
+                  <td className="px-2 py-2.5 text-right text-[var(--color-muted)]">
+                    {steps === null ? <Missing /> : formatInt(steps)}
+                  </td>
+                  <td
+                    className={`px-2 py-2.5 text-right font-semibold ${
+                      balance === null
+                        ? 'text-[var(--color-muted)]'
+                        : balance >= 0
+                          ? 'text-[var(--color-accent-text)]'
+                          : 'text-[var(--color-danger-text)]'
+                    }`}
+                  >
+                    {balance === null ? <Missing /> : formatSigned(balance)}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Name only the factors that actually do something. Listing "Garmin
+          x 1.00" is the same claim-of-work the chain above stopped making. */}
+      <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted)]">
+        {(() => {
+          const applied = [
+            settings.garminAdjustmentFactor !== 1 && `burn x ${settings.garminAdjustmentFactor.toFixed(2)}`,
+            settings.intakeAdjustmentFactor !== 1 && `intake x ${settings.intakeAdjustmentFactor.toFixed(2)}`,
+          ].filter(Boolean) as string[]
+          if (applied.length === 0) return 'Figures as reported.'
+          return `Figures as reported, with ${applied.join(' and ')}.`
+        })()}{' '}
+        A day needs both sides to count toward the mission.
+      </p>
+    </Card>
+  )
+}
+
+/** A missing figure, marked as absent rather than rendered as a zero. */
+function Missing() {
+  return (
+    <span className="text-[var(--color-muted)]" title="No data for this day">
+      --
+    </span>
+  )
+}
+
 export function WeekWorkoutsCard() {
   const { activities, settings } = useData()
   const week = summarize(filterActivities(activities, resolveRange('week')))

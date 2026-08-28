@@ -5,6 +5,7 @@ import {
   MorningMissionCard,
   NutritionCard,
   PeriodDeficitCard,
+  RecentDaysCard,
   TodayActivityCard,
   TodayEnergyCard,
   WeekWorkoutsCard,
@@ -69,6 +70,8 @@ export function Dashboard() {
       </div>
 
       <PeriodDeficitCard />
+
+      <RecentDaysCard />
 
       <div className="grid min-w-0 gap-5 lg:grid-cols-2">
         <Card title="Cumulative Deficit Trend">

@@ -67,7 +67,15 @@ export const DEFAULT_SETTINGS: Settings = {
   missionBufferPercent: 20,
   missionTargetOverride: null,
 
-  garminAdjustmentFactor: 0.9,
+  // 1.0: no correction. Garmin's expenditure is taken as reported.
+  //
+  // This was 0.85, then 0.90, on the theory that wrist-based estimates are
+  // generous. The theory may well be right, but a factor nobody can calibrate
+  // is a second source of error stacked on the first, and it made every figure
+  // in the app an estimate of an estimate. The Mission page's model check still
+  // reports the multiplier that would reconcile predicted loss against the
+  // scale, so the correction can come back with evidence behind it.
+  garminAdjustmentFactor: 1,
   intakeAdjustmentFactor: 1.1,
 
   morningStepGoal: 7000,
