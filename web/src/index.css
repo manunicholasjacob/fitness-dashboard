@@ -116,6 +116,18 @@
   --scrollbar-thumb-hover: #2e3f68;
 
   /*
+   * The unfilled part of an activity ring.
+   *
+   * Two ratios matter here and they pull against each other. The filled arc
+   * must separate from the track, because that boundary is the reading, and it
+   * does: 6.7:1 in dark, 3.5:1 in light. The track must also be visible against
+   * the card, or the ring loses its "how far is left" and becomes a bare arc
+   * floating in space; at 1.5:1 it reads as a groove without competing with the
+   * fill for attention.
+   */
+  --ring-track: #2c3859;
+
+  /*
    * Semantic colours, small-text variants.
    *
    * Contrast requirements scale with type size, and a single colour per meaning
@@ -228,6 +240,8 @@
     --selection-bg: #c8e8d8;
     --scrollbar-thumb: #c2cadb;
     --scrollbar-thumb-hover: #a9b3c9;
+
+    --ring-track: #ccd4e4;
 
     /* Solved to 7:1 against the page, the darkest ground these sit on. The
        vivid base tones above stay for display figures and graphics, which are

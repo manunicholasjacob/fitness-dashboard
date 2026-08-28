@@ -3,6 +3,7 @@ import { useData } from '../lib/data'
 import {
   CloseTheGapCard,
   MissionCard,
+  ProgressGameCard,
   MorningMissionCard,
   NutritionCard,
   PeriodDeficitCard,
@@ -64,6 +65,8 @@ export function Dashboard() {
           <WeightCard />
         </div>
       </div>
+
+      <ProgressGameCard />
 
       {/* The actionable card sits high. The persona review found the one lever
           available on an incomplete day was ranked ninth on the page. */}

@@ -154,6 +154,35 @@ database on change, chip rows at 36px. `.tap` and `.tap-inline` exist for the
 cases where padding to 44px would loosen the row: the hit area grows, the visual
 box does not.
 
+## The game layer
+
+Added at the owner's request, and built so it cannot flatter.
+
+Everything on the Progress card is a restatement of a figure the app already
+holds. A rank is cumulative deficit divided by a theoretical pound. A mission
+marker is a real kcal threshold. A streak counts days that actually met the
+goal, and **breaks on a day with nothing logged rather than skipping it**, which
+is the single most important rule in there: skipping would let a run of unlogged
+days masquerade as consistency, in a tracker whose main failure mode is not
+logging.
+
+Nothing is awarded for opening the app, and there are no points with an
+invented exchange rate. The ranks are named for the distance covered rather than
+for metals or tiers, because the whole argument is that the number means
+something physical.
+
+The rings are SVG rather than divs because they are instruments: an arc has to
+be exactly 62% of the way round. They animate `stroke-dashoffset` once on mount,
+which is the one place the app spends motion, and skip it entirely under
+`prefers-reduced-motion`.
+
+Two contrast ratios pull against each other on a ring and both matter. The
+filled arc must separate from the track, because that boundary is the reading:
+6.7:1 in dark, 3.5:1 in light. The track must also separate from the card, or
+the ring loses its "how far is left" and becomes a bare arc floating in space.
+`--ring-track` sits at 1.5:1, which reads as a groove without competing with the
+fill.
+
 ## Things that are deliberate
 
 - **No in-app theme switch.** The app follows the system appearance. An

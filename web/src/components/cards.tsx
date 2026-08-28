@@ -9,6 +9,8 @@ import {
 } from '../core/energy'
 import { minutesUntilDeadline, morningStats } from '../core/morning'
 import { dayGap, shareOfMission, stepsToClose, suggestions } from '../core/suggest'
+import { milestones, rank, rings, streak } from '../core/game'
+import { ActivityRings, MilestoneTrack, RankBadge, RingLegend, StreakChips } from './game'
 import { latestMeasurement, weightPoints } from '../core/body'
 import { rollingAverage, trendChange } from '../core/trend'
 import { ACTIVITY_LABELS, filterActivities, resolveRange, summarize } from '../core/activity'
@@ -550,6 +552,90 @@ export function PeriodDeficitCard() {
             tone={value === null ? 'muted' : value >= 0 ? 'good' : 'bad'}
           />
         ))}
+      </div>
+    </Card>
+  )
+}
+
+/**
+ * The game card: rings, rank and the mission as a track of markers.
+ *
+ * This is the layer that makes 84,000 playable. It adds no data of its own: a
+ * rank is cumulative deficit divided by a pound, a marker is a real kcal
+ * threshold, a streak counts days that actually met the goal and breaks on days
+ * that were never logged. Nothing is awarded for opening the app.
+ */
+export function ProgressGameCard() {
+  const { days, settings } = useData()
+  const today = useToday()
+  const p = missionProgress(days, settings)
+
+  const morningSteps = today?.raw.stepsBeforeDeadline ?? today?.raw.stepsTotal ?? null
+  const ringSpecs = rings(today, settings, morningSteps)
+  const currentRank = rank(p.accumulated, settings)
+  const marks = milestones(p.accumulated, settings)
+  const run = streak(days, settings, todayIso())
+
+  // The last fourteen finished days, oldest first, so the row reads left to
+  // right like a calendar rather than like a leaderboard.
+  const recent = Array.from({ length: 14 }, (_, i) => daysAgoIso(14 - i)).map((iso) => {
+    const d = days.find((x) => x.date === iso)
+    return { date: iso, balance: d?.adjustedBalance ?? null, complete: d?.isComplete ?? false }
+  })
+
+  return (
+    <Card title="Progress" subtitle="Today's rings, rank and the road to 84,000" tone="raised">
+      {/* --- Rings and rank ------------------------------------------------- */}
+      <div className="flex flex-wrap items-center gap-5 sm:flex-nowrap">
+        <ActivityRings rings={ringSpecs} />
+        <RingLegend rings={ringSpecs} />
+      </div>
+
+      <div className="mt-5 flex items-center gap-4 border-t border-[var(--color-edge)] pt-5">
+        <RankBadge rank={currentRank} />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-[var(--color-text)]">{currentRank.name}</p>
+          <p className="tnum mt-0.5 text-xs text-[var(--color-muted)]">
+            {currentRank.toNext === null
+              ? `${formatInt(p.accumulated)} kcal banked`
+              : `${formatInt(currentRank.toNext)} kcal to level ${currentRank.level + 1}`}
+          </p>
+          <div className="mt-2 max-w-[16rem]">
+            <ProgressBar percent={currentRank.progress * 100} height="h-1.5" />
+          </div>
+        </div>
+      </div>
+
+      {/* --- Streak ---------------------------------------------------------- */}
+      <div className="mt-5 border-t border-[var(--color-edge)] pt-5">
+        <div className="flex items-baseline justify-between gap-3">
+          <h3 className="eyebrow text-[var(--color-muted)]">Last 14 days</h3>
+          <p className="tnum text-xs text-[var(--color-muted)]">
+            <span className="font-semibold text-[var(--color-text)]">{run.current}</span> day
+            {run.current === 1 ? '' : 's'} running
+            {run.best > run.current && ` · best ${run.best}`}
+          </p>
+        </div>
+        <div className="mt-2.5">
+          <StreakChips days={recent} goal={settings.dailyDeficitGoal} />
+        </div>
+        <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-muted)]">
+          Filled means the {formatInt(settings.dailyDeficitGoal)} kcal goal was met. A day with
+          nothing logged breaks the run rather than being skipped, because a gap is the thing
+          worth noticing.
+        </p>
+      </div>
+
+      {/* --- The mission as a track ------------------------------------------ */}
+      <div className="mt-5 border-t border-[var(--color-edge)] pt-5">
+        <h3 className="eyebrow text-[var(--color-muted)]">Mission markers</h3>
+        <div className="mt-2.5">
+          <MilestoneTrack
+            milestones={marks}
+            accumulated={p.accumulated}
+            perPound={settings.caloriesPerPound}
+          />
+        </div>
       </div>
     </Card>
   )
