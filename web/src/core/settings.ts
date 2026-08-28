@@ -30,6 +30,10 @@ export const settingsSchema = z.object({
   garminAdjustmentFactor: z.number().min(0.3).max(1.5),
   intakeAdjustmentFactor: z.number().min(0.5).max(2),
 
+  // The per-day deficit the "close the gap" suggestions aim at. 500 kcal/day
+  // is the conventional figure for a pound a week, which is where it starts.
+  dailyDeficitGoal: z.number().int().min(100).max(3000),
+
   morningStepGoal: z.number().int().min(100).max(100000),
   morningDeadline: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
 
@@ -78,6 +82,7 @@ export const DEFAULT_SETTINGS: Settings = {
   garminAdjustmentFactor: 1,
   intakeAdjustmentFactor: 1.1,
 
+  dailyDeficitGoal: 500,
   morningStepGoal: 7000,
   morningDeadline: '09:00',
 

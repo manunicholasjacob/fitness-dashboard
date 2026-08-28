@@ -135,6 +135,8 @@ export interface Settings {
   intakeAdjustmentFactor: number
 
   // Morning mission
+  /** Per-day deficit the suggestions aim at, in kcal. */
+  dailyDeficitGoal: number
   morningStepGoal: number
   morningDeadline: string // 'HH:MM' local
 

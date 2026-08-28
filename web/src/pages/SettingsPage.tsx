@@ -147,6 +147,24 @@ export function SettingsPage() {
         </p>
       </Card>
 
+      <Card title="Daily Goal">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field
+            label="Deficit per day"
+            hint={`kcal. 500 is roughly a pound a week at ${formatInt(draft.caloriesPerPound)} kcal/lb.`}
+          >
+            <input type="number" className={inputClass} value={draft.dailyDeficitGoal}
+              onChange={(e) => set('dailyDeficitGoal',
+                Math.round(num(e.target.value, DEFAULT_SETTINGS.dailyDeficitGoal)))} />
+          </Field>
+        </div>
+        <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted)]">
+          What the dashboard&rsquo;s suggestions aim at. It is deliberately not derived from the
+          mission target and a deadline: that would let one missed day quietly raise every
+          future day&rsquo;s bar, which is how a tracker turns into a ratchet.
+        </p>
+      </Card>
+
       <Card title="Morning Mission">
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label="Target steps">

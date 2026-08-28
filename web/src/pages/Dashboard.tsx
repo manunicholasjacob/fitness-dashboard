@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { useData } from '../lib/data'
 import {
+  CloseTheGapCard,
   MissionCard,
   MorningMissionCard,
   NutritionCard,
@@ -64,9 +65,16 @@ export function Dashboard() {
         </div>
       </div>
 
+      {/* The actionable card sits high. The persona review found the one lever
+          available on an incomplete day was ranked ninth on the page. */}
       <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+        <CloseTheGapCard />
         <NutritionCard />
+      </div>
+
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
         <TodayActivityCard />
+        <WeekWorkoutsCard />
       </div>
 
       <PeriodDeficitCard />
@@ -98,8 +106,6 @@ export function Dashboard() {
           )}
         </Card>
       </div>
-
-      <WeekWorkoutsCard />
 
       {insights.length > 0 && (
         <Card title="Insights" subtitle="Computed from your data, nothing invented">

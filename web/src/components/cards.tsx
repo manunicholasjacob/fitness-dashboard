@@ -4,12 +4,14 @@ import { QuickCalories } from './QuickCalories'
 import {
   cumulativeBalance,
   missionProgress,
+  missionTarget,
   projectMissionCompletion,
 } from '../core/energy'
 import { minutesUntilDeadline, morningStats } from '../core/morning'
+import { dayGap, shareOfMission, stepsToClose, suggestions } from '../core/suggest'
 import { latestMeasurement, weightPoints } from '../core/body'
 import { rollingAverage, trendChange } from '../core/trend'
-import { filterActivities, resolveRange, summarize } from '../core/activity'
+import { ACTIVITY_LABELS, filterActivities, resolveRange, summarize } from '../core/activity'
 import {
   formatDistance,
   formatDuration,
@@ -17,6 +19,7 @@ import {
   formatSigned,
   formatWeight,
   kgToLb,
+  pluralize,
 } from '../core/units'
 import type { ComputedDay } from '../core/types'
 
@@ -548,6 +551,140 @@ export function PeriodDeficitCard() {
           />
         ))}
       </div>
+    </Card>
+  )
+}
+
+/**
+ * Today's goal, and what would close it.
+ *
+ * The mission card says how far along the whole thing is. That is the right
+ * headline and the wrong thing to act on: 0.8% of 84,000 does not tell anyone
+ * what to do this afternoon. This card takes the day's shortfall and turns it
+ * into options with durations attached, priced from the owner's own sessions.
+ *
+ * It stays factual on purpose. No streak to protect, no badge, no encouragement:
+ * it states the gap, states what would cover it, and stops. The estimates are
+ * labelled as estimates and carry their basis, because exercise calorie figures
+ * are soft and presenting them as spend-this-and-get-that would be the same
+ * laundering the adjustment chain exists to prevent.
+ */
+export function CloseTheGapCard() {
+  const { activities, settings } = useData()
+  const today = useToday()
+  const gap = dayGap(today, settings)
+  const target = missionTarget(settings)
+
+  const remaining = gap.remaining
+  const options = remaining === null ? [] : suggestions(remaining, activities)
+  const steps = remaining === null ? null : stepsToClose(remaining)
+
+  return (
+    <Card
+      title="Today's Goal"
+      subtitle={`${formatInt(gap.goal)} kcal deficit`}
+      right={<Tag kind="estimated" />}
+    >
+      {/* --- Where the day stands ------------------------------------------ */}
+      {gap.current === null ? (
+        <div className="rounded-[var(--radius-control)] bg-[var(--color-inset)] p-4
+          ring-1 ring-inset ring-[var(--color-edge)]">
+          {gap.burnedSoFar === null ? (
+            <p className="text-sm text-[var(--color-muted)]">
+              Waiting on today&rsquo;s Garmin sync before there is a gap to close.
+            </p>
+          ) : (
+            <>
+              <p className="text-sm text-[var(--color-text)]">
+                <span className="tnum font-semibold">{formatInt(gap.burnedSoFar)}</span> kcal
+                burned so far, nothing logged to eat.
+              </p>
+              <p className="mt-1.5 text-sm text-[var(--color-muted)]">
+                Eating up to{' '}
+                <span className="tnum font-semibold text-[var(--color-accent-text)]">
+                  {formatInt(gap.intakeBudget)}
+                </span>{' '}
+                kcal today still clears the {formatInt(gap.goal)} goal.
+              </p>
+            </>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="display text-4xl text-[var(--color-text)]">
+              {formatSigned(gap.current)}
+            </p>
+            <p className="tnum text-sm text-[var(--color-muted)]">
+              of {formatInt(gap.goal)}
+            </p>
+          </div>
+          <div className="mt-3">
+            <ProgressBar percent={(gap.progress ?? 0) * 100} height="h-2.5" />
+          </div>
+        </>
+      )}
+
+      {/* --- What would close it -------------------------------------------- */}
+      {gap.met ? (
+        <p className="mt-4 text-sm text-[var(--color-accent-text)]">
+          Today&rsquo;s goal is met. Anything further is ahead of the mission, not owed to it.
+        </p>
+      ) : remaining !== null && remaining > 0 ? (
+        <div className="mt-4">
+          <p className="text-sm text-[var(--color-text)]">
+            <span className="tnum font-semibold">{formatInt(remaining)}</span> kcal to go. Any one
+            of these would cover it:
+          </p>
+
+          {options.length === 0 ? (
+            <p className="mt-2 text-sm text-[var(--color-muted)]">
+              More than a session&rsquo;s worth. Eating less of the remainder of the day is the
+              realistic lever here, not a longer workout.
+            </p>
+          ) : (
+            <ul className="mt-3 grid gap-2">
+              {options.map((o) => (
+                <li
+                  key={o.type}
+                  className="flex items-center justify-between gap-3 rounded-[var(--radius-control)]
+                    bg-[var(--color-inset)] px-3.5 py-3 ring-1 ring-inset ring-[var(--color-edge)]"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-[var(--color-text)]">
+                      {o.minutes} min {ACTIVITY_LABELS[o.type].toLowerCase()}
+                    </p>
+                    <p className="mt-0.5 text-xs text-[var(--color-muted)]">
+                      {o.rate.basis === 'personal'
+                        ? `${o.rate.perMinute.toFixed(1)} kcal/min across your last ${pluralize(o.rate.sessions, 'session')}`
+                        : `${o.rate.perMinute.toFixed(1)} kcal/min, reference rate: none logged yet`}
+                    </p>
+                  </div>
+                  <p className="tnum shrink-0 text-sm font-semibold text-[var(--color-accent-text)]">
+                    ~{formatInt(o.kcal)}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {steps !== null && (
+            <p className="mt-2.5 text-xs text-[var(--color-muted)]">
+              Or about <span className="tnum font-semibold">{formatInt(steps)}</span> more steps,
+              at a reference 0.045 kcal per step.
+            </p>
+          )}
+
+          {options.length > 0 && (
+            <p className="mt-3 text-xs leading-relaxed text-[var(--color-muted)]">
+              Worth about{' '}
+              <span className="tnum">{shareOfMission(options[0].kcal, target).toFixed(2)}%</span> of
+              the 84,000 kcal mission. Exercise calorie figures are soft, so treat these as the
+              size of the effort rather than a promise.
+            </p>
+          )}
+        </div>
+      ) : null}
     </Card>
   )
 }

@@ -151,6 +151,7 @@ export function toSettings(row: Record<string, unknown> | null): Settings {
     missionTargetOverride: num(row.mission_target_override),
     garminAdjustmentFactor: num(row.garmin_adjustment_factor) ?? 0.85,
     intakeAdjustmentFactor: num(row.intake_adjustment_factor) ?? 1.1,
+    dailyDeficitGoal: num(row.daily_deficit_goal) ?? 500,
     morningStepGoal: num(row.morning_step_goal) ?? 7000,
     // Postgres returns 'HH:MM:SS'; the UI works in 'HH:MM'.
     morningDeadline: (str(row.morning_deadline) ?? '09:00').slice(0, 5),
@@ -183,6 +184,7 @@ export function fromSettings(s: Settings) {
     mission_target_override: s.missionTargetOverride,
     garmin_adjustment_factor: s.garminAdjustmentFactor,
     intake_adjustment_factor: s.intakeAdjustmentFactor,
+    daily_deficit_goal: s.dailyDeficitGoal,
     morning_step_goal: s.morningStepGoal,
     morning_deadline: s.morningDeadline,
     protein_target: s.proteinTarget,
