@@ -112,8 +112,26 @@ export function ChartFrame({
   children: ReactElement
 }) {
   return (
-    <figure className="m-0">
-      <div style={{ width: '100%', height }} role="img" aria-label={summary}>
+    /*
+     * min-w-0 and overflow-hidden are both load-bearing.
+     *
+     * A grid or flex item defaults to min-width:auto, so it refuses to shrink
+     * below its content. ResponsiveContainer measures that parent, sizes the SVG
+     * to it, and the measurement then becomes the content width the parent will
+     * not go below. The result is a chart that grows with the window and never
+     * shrinks back: narrowing a laptop window from 1280 to 1024 left the page
+     * scrolling 64px sideways, while a fresh load at either width was clean.
+     *
+     * min-w-0 lets the parent shrink; overflow-hidden stops the SVG pushing the
+     * page out during the frame before Recharts re-measures.
+     */
+    <figure className="m-0 min-w-0">
+      <div
+        style={{ width: '100%', height }}
+        className="min-w-0 overflow-hidden"
+        role="img"
+        aria-label={summary}
+      >
         <ResponsiveContainer width="100%" height="100%">
           {children}
         </ResponsiveContainer>

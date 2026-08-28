@@ -48,7 +48,7 @@ export function ActivityPage() {
           <button
             key={key}
             onClick={() => setRange(key)}
-            className={`min-h-9 rounded-lg px-3 text-xs font-semibold transition ${
+            className={`min-h-11 rounded-[var(--radius-inner)] px-3.5 text-xs font-semibold transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] ${
               range === key
                 ? 'bg-[var(--color-accent-fill)] text-[var(--color-on-accent)]'
                 : 'border border-[var(--color-edge)] text-[var(--color-muted)] hover:text-[var(--color-text)]'
@@ -278,7 +278,13 @@ function ManualActivityForm({ onSaved }: { onSaved: () => Promise<void> }) {
     <Card
       title="Log a Session Manually"
       right={
-        <button onClick={() => setOpen((v) => !v)} className="text-xs text-[var(--color-muted)] hover:underline">
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          className="tap-inline -mr-2 rounded-[var(--radius-inner)] px-2 text-xs
+            text-[var(--color-muted)] transition duration-200 hover:bg-[var(--color-inset)]
+            hover:text-[var(--color-text)] active:scale-[0.97]"
+        >
           {open ? 'Close' : 'Open'}
         </button>
       }

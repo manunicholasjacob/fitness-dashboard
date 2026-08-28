@@ -81,6 +81,38 @@ function StaleBanner() {
   )
 }
 
+/**
+ * A failed load, said out loud.
+ *
+ * `error` was set on every fetch failure and read by nothing, so a dead
+ * connection painted a confident, fully populated empty state: "No data for
+ * today yet", "No weigh-ins yet", and a mission hero reading 0.0% of 84,000.
+ *
+ * That is worse than a blank screen. The entire product is a running total, and
+ * reporting zero when the number is merely unknown is the one lie it cannot
+ * afford. Principle 4 in PRODUCT.md exists to forbid exactly this.
+ */
+function ErrorBanner() {
+  const { error, servedFromCacheMs } = useData()
+  if (!error) return null
+
+  return (
+    <div
+      role="alert"
+      className="border-b border-[var(--color-danger-edge)] bg-[var(--color-danger)]/10 px-4 py-2
+        text-center text-xs text-[var(--color-danger-text)]"
+    >
+      Could not reach the server.{' '}
+      {servedFromCacheMs === null
+        ? 'Figures below may be missing or out of date.'
+        : 'Showing the last saved snapshot.'}{' '}
+      <NavLink to="/settings" className="underline underline-offset-2">
+        Try again
+      </NavLink>
+    </div>
+  )
+}
+
 function DemoBanner() {
   const { daily, body, activities } = useData()
   const hasDemo =
@@ -134,6 +166,7 @@ export function Layout() {
       >
         Skip to content
       </a>
+      <ErrorBanner />
       <DemoBanner />
       <StaleBanner />
 
@@ -146,12 +179,13 @@ export function Layout() {
        * shell and inner core are separate layers so the pill has a real edge
        * rather than a drawn-on border: hairline ring outside, highlight inside.
        */}
-      <div className="sticky top-0 z-20 hidden px-6 pb-2 pt-4 md:block">
+      <div className="sticky top-0 z-20 hidden px-6 pb-2 pt-4 lg:block">
         <header
           // w-max, so the pill is the width of what is in it. Stretched to a
           // container width it stops reading as an object and goes back to
           // reading as a bar with rounded ends.
-          className="material mx-auto flex w-max max-w-full items-center gap-1 rounded-full
+          className="material mx-auto flex w-max min-w-0 max-w-full items-center gap-1
+            overflow-x-auto rounded-full
             bg-[var(--color-surface)]/75 px-2.5 py-2 ring-1 ring-[var(--color-edge)]
             backdrop-blur-xl
             [box-shadow:var(--shadow-raised),inset_0_1px_0_var(--edge-highlight)]"
@@ -171,7 +205,7 @@ export function Layout() {
               to={item.to}
               end={item.to === '/'}
               className={({ isActive }) =>
-                `rounded-full px-3 py-1.5 text-[13px] transition duration-300
+                `rounded-full px-3 py-1.5 text-[13px] transition duration-200
                  ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] ${
                    isActive
                      ? 'bg-[var(--color-accent-quiet)] font-semibold text-[var(--color-accent-text)] ' +
@@ -193,7 +227,7 @@ export function Layout() {
             <button
               onClick={() => void signOut()}
               className="rounded-full px-2.5 py-1 text-xs text-[var(--color-muted)] transition
-                duration-300 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--color-inset)]
+                duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--color-inset)]
                 hover:text-[var(--color-text)] active:scale-[0.97]"
             >
               Sign out
@@ -204,7 +238,7 @@ export function Layout() {
 
       {/* Mobile header keeps the identity without stealing vertical space. */}
       <header className="material sticky top-0 z-20 flex items-center justify-between
-        bg-[var(--color-ink)]/80 px-4 py-3 backdrop-blur-xl md:hidden">
+        bg-[var(--color-ink)]/80 px-4 py-3 backdrop-blur-xl lg:hidden">
         <span className="flex items-center gap-2 text-xs font-bold tracking-[0.18em]
           text-[var(--color-accent-text)]">
           <span
@@ -217,7 +251,7 @@ export function Layout() {
         {refreshing && <SyncingPulse />}
       </header>
 
-      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:px-6 md:pb-14 md:pt-7">
+      <main id="main" className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-5 sm:px-6 lg:pb-14 lg:pt-7">
         <Outlet />
       </main>
 
@@ -233,7 +267,7 @@ export function Layout() {
        */}
       <nav
         aria-label="Primary"
-        className="fixed inset-x-3 z-30 md:hidden"
+        className="fixed inset-x-3 z-30 lg:hidden"
         style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.625rem)' }}
       >
         <div
@@ -248,7 +282,7 @@ export function Layout() {
               end={item.to === '/'}
               className={({ isActive }) =>
                 `relative flex flex-1 flex-col items-center gap-1 rounded-[1rem] py-2
-                 text-[11px] transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]
+                 text-[11px] transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]
                  active:scale-[0.94] ${
                    isActive
                      ? 'bg-[var(--color-accent-quiet)] font-semibold text-[var(--color-accent-text)]'
@@ -263,7 +297,7 @@ export function Layout() {
           <NavLink
             to="/settings"
             className={`relative flex flex-1 flex-col items-center gap-1 rounded-[1rem] py-2
-              text-[11px] transition duration-300 ease-[cubic-bezier(0.32,0.72,0,1)]
+              text-[11px] transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)]
               active:scale-[0.94] ${
                 onMore
                   ? 'bg-[var(--color-accent-quiet)] font-semibold text-[var(--color-accent-text)]'

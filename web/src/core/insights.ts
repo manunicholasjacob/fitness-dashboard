@@ -7,7 +7,6 @@
  */
 
 import type { Activity, BodyEntry, ComputedDay, Settings } from './types'
-import { missionProgress } from './energy'
 import { morningStats } from './morning'
 import { filterActivities, resolveRange, runningStats, summarize } from './activity'
 import { rollingAverage, trendChange, type Point } from './trend'
@@ -23,7 +22,6 @@ export interface Insight {
   tone: InsightTone
 }
 
-const pct = (n: number) => `${n.toFixed(0)}%`
 const int = (n: number) => Math.round(n).toLocaleString('en-US')
 
 export function buildInsights(
@@ -36,14 +34,11 @@ export function buildInsights(
   const sorted = days.slice().sort((a, b) => a.date.localeCompare(b.date))
 
   // --- Mission ---
-  const progress = missionProgress(sorted, settings)
-  if (progress.accumulated !== 0) {
-    out.push({
-      id: 'mission-progress',
-      text: `You are ${pct(progress.percent)} of the way through your ${int(progress.target)} kcal mission.`,
-      tone: progress.percent > 0 ? 'positive' : 'caution',
-    })
-  }
+  // No mission-progress insight here on purpose. It restated the hero, which
+  // states the same figure at 96px directly above, and it restated it through
+  // `toFixed(0)`: at 0.2% the closing line of the dashboard read "You are 0% of
+  // the way through", rounding away the one number the product exists to carry,
+  // in the position the reader remembers.
 
   // --- Weekly average deficit ---
   const week = sorted.slice(-7).filter((d) => d.isComplete)

@@ -109,6 +109,12 @@
    */
   --edge-highlight: rgb(255 255 255 / 0.055);
 
+  /* Browser surfaces. Selection is solved so selected text stays past 7:1 on
+     top of the tint, not merely "greenish". */
+  --selection-bg: #1a4830;
+  --scrollbar-thumb: #223052;
+  --scrollbar-thumb-hover: #2e3f68;
+
   /*
    * Semantic colours, small-text variants.
    *
@@ -218,6 +224,10 @@
     /* Pure white on an already-white card does nothing, so in light mode the
        lit edge is the absence of the shadow's tint rather than added white. */
     --edge-highlight: rgb(255 255 255 / 0.9);
+
+    --selection-bg: #c8e8d8;
+    --scrollbar-thumb: #c2cadb;
+    --scrollbar-thumb-hover: #a9b3c9;
 
     /* Solved to 7:1 against the page, the darkest ground these sit on. The
        vivid base tones above stay for display figures and graphics, which are
@@ -352,41 +362,18 @@ html {
 }
 
 /*
- * Entry motion.
+ * There is no page-load entrance, and that is the decision.
  *
- * Content settles in rather than snapping into place. Deliberately restrained:
- * this is a dashboard someone opens many times a day, and a reveal that is
- * charming on a first visit becomes a tax on the two hundredth. So it runs once
- * per mount, over 460ms, moves 10px, and never blurs or scales, which are the
- * parts that read as a website performing for you.
+ * A staggered reveal was built here and removed. Product UI loads into a task:
+ * the reader came for a number, and an entrance makes them wait to read it. It
+ * is also the same animation on every section, which is scattered effect rather
+ * than an authored moment, and it costs most on exactly the visit pattern this
+ * app has, which is many short ones.
  *
- * Transform and opacity only, so it stays on the compositor.
+ * The one authored moment is the mission bar animating its own width when the
+ * value changes. That conveys state. Everything else is already there when the
+ * page is.
  */
-@keyframes rise {
-  from {
-    opacity: 0;
-    transform: translate3d(0, 10px, 0);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.rise {
-  animation: rise 460ms cubic-bezier(0.32, 0.72, 0, 1) backwards;
-}
-
-/*
- * The stagger. Six steps is enough for the visible fold; beyond that the delay
- * would outlast the scroll and content would appear to be missing.
- */
-.rise-1 { animation-delay: 0ms; }
-.rise-2 { animation-delay: 45ms; }
-.rise-3 { animation-delay: 90ms; }
-.rise-4 { animation-delay: 135ms; }
-.rise-5 { animation-delay: 180ms; }
-.rise-6 { animation-delay: 225ms; }
 
 /*
  * Motion is supplementary here: nothing in this app communicates state through
@@ -429,4 +416,85 @@ html {
 input[type='date'],
 input[type='time'] {
   color-scheme: light dark;
+}
+
+/*
+ * The surfaces the browser draws for you.
+ *
+ * Selection, the caret, the scrollbar and the form-control accent all ship with
+ * defaults that belong to no design system, and on a dark palette the stock
+ * blue selection and light scrollbar are the two things that most obviously
+ * announce the page was assembled rather than built. They cost four rules.
+ */
+::selection {
+  background: var(--selection-bg);
+  /* Not inherited: a selected .display figure would otherwise keep the accent
+     green on top of a green tint. */
+  color: var(--color-text);
+}
+
+body {
+  caret-color: var(--color-accent);
+  /* Checkboxes, radios and range inputs, which are drawn by the platform. */
+  accent-color: var(--color-accent-fill);
+}
+
+/* Firefox. Thin, and only the two colours it accepts. */
+* {
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+  scrollbar-width: thin;
+}
+
+/*
+ * WebKit and Blink. Deliberately not a bespoke scrollbar: same metrics as the
+ * platform's, recoloured to the palette. Reinventing the scrollbar is on the
+ * list of things a product UI should never do.
+ */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/*
+ * A 44px touch target that does not disturb the layout around it.
+ *
+ * The Button primitive and inputClass already carry min-h-11, but bare
+ * `<button class="text-xs">` and chip rows bypass them and were measuring as
+ * little as 16px tall. Padding them to 44px would loosen every row they sit in,
+ * so the height is taken back with a negative margin: the hit area is 44px, the
+ * visual box is unchanged.
+ */
+.tap {
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+.tap-inline {
+  min-height: 2.75rem;
+  margin-block: -0.5rem;
+  display: inline-flex;
+  align-items: center;
+}
+
+/* Links in prose sit clear of their descenders rather than through them. */
+a {
+  text-underline-offset: 0.2em;
+  text-decoration-thickness: from-font;
 }

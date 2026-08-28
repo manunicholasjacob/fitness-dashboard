@@ -39,9 +39,14 @@ export function useToday(): ComputedDay | undefined {
 // --- Mission ----------------------------------------------------------------
 
 export function MissionCard({ compact = false }: { compact?: boolean }) {
-  const { days, settings } = useData()
+  const { days, settings, error } = useData()
   const p = missionProgress(days, settings)
   const projection = projectMissionCompletion(days, settings)
+
+  // Unknown is not zero. If the load failed and nothing arrived, every other
+  // card in this app renders "--" rather than inventing a figure; the one that
+  // carries the whole point of the product has to do the same.
+  const unknown = error !== null && days.length === 0
 
   return (
     <Card
@@ -68,23 +73,38 @@ export function MissionCard({ compact = false }: { compact?: boolean }) {
         {/* One spoken sentence for the whole card, so a screen reader gets the
             state rather than three orphaned numbers. */}
         <p className="sr-only" aria-live="polite">
-          {`${p.percent.toFixed(1)} percent complete. ${formatInt(p.accumulated)} of ${formatInt(
-            p.target,
-          )} kilocalories accumulated, ${formatInt(p.remaining)} remaining.`}
+          {unknown
+            ? 'Mission progress is unavailable because the data could not be loaded.'
+            : `${p.percent.toFixed(1)} percent complete. ${formatInt(p.accumulated)} of ${formatInt(
+                p.target,
+              )} kilocalories accumulated, ${formatInt(p.remaining)} remaining.`}
         </p>
 
         {/* The percent sign is set smaller and lighter than the figure. At the
             same weight it reads as a fourth digit and steals from the number. */}
-        <p aria-hidden="true" className="display mt-5 text-6xl text-[var(--color-accent)] sm:text-8xl">
-          {p.percent.toFixed(1)}
-          <span className="ml-0.5 align-baseline text-[0.42em] font-semibold tracking-normal opacity-70">
-            %
-          </span>
+        <p
+          aria-hidden="true"
+          className={`display mt-5 text-6xl sm:text-8xl ${
+            unknown ? 'text-[var(--color-muted)]' : 'text-[var(--color-accent)]'
+          }`}
+        >
+          {unknown ? '--' : p.percent.toFixed(1)}
+          {!unknown && (
+            <span className="ml-0.5 align-baseline text-[0.42em] font-semibold tracking-normal opacity-70">
+              %
+            </span>
+          )}
         </p>
 
         <p className="tnum mt-3 text-base tracking-[-0.01em] text-[var(--color-text)] sm:text-lg">
-          <span className="font-semibold">{formatInt(p.accumulated)}</span>{' '}
-          <span className="text-[var(--color-muted)]">of {formatInt(p.target)} kcal</span>
+          {unknown ? (
+            <span className="text-[var(--color-muted)]">Progress unavailable</span>
+          ) : (
+            <>
+              <span className="font-semibold">{formatInt(p.accumulated)}</span>{' '}
+              <span className="text-[var(--color-muted)]">of {formatInt(p.target)} kcal</span>
+            </>
+          )}
         </p>
 
         {/*
@@ -343,7 +363,15 @@ export function WeightCard() {
           )}
 
           <div className="mt-4 grid grid-cols-3 gap-3 border-t border-[var(--color-edge)] pt-3">
-            <Stat label="Lost" value={lost === null ? '--' : `${lost.toFixed(1)} lb`} size="sm" tone="good" />
+            {/* Tone follows the sign. Hardcoded "good" rendered a weight *gain*
+                in accent green under the word "Lost", which at a glance reads as
+                progress. PeriodDeficitCard already derives this correctly. */}
+            <Stat
+              label="Lost"
+              value={lost === null ? '--' : `${lost.toFixed(1)} lb`}
+              size="sm"
+              tone={lost === null ? 'muted' : lost > 0 ? 'good' : lost < 0 ? 'bad' : 'default'}
+            />
             <Stat label="To target" value={toGo === null ? '--' : `${toGo.toFixed(1)} lb`} size="sm" />
             <Stat
               label="Waist"

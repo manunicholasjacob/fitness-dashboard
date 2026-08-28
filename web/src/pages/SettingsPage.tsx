@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
+import { NavLink } from 'react-router-dom'
 import { useData } from '../lib/data'
 import { useAuth } from '../lib/auth'
 import { Button, Card, Field, Stat, inputClass } from '../components/ui'
 import { missionTarget } from '../core/energy'
 import { formatInt, kgToLb, lbToKg } from '../core/units'
 import type { Settings } from '../core/types'
-import { settingsSchema } from '../core/settings'
+import { settingsSchema, DEFAULT_SETTINGS } from '../core/settings'
 import * as api from '../lib/api'
 import { generateDemoData } from '../lib/demo'
 import { clearCache } from '../lib/cache'
@@ -122,11 +123,11 @@ export function SettingsPage() {
         <div className="grid gap-3 sm:grid-cols-2">
           <Field
             label="Garmin calorie factor"
-            hint={`Reported calories x ${draft.garminAdjustmentFactor.toFixed(2)}. Default 0.85.`}
+            hint={`Reported calories x ${draft.garminAdjustmentFactor.toFixed(2)}. Default ${DEFAULT_SETTINGS.garminAdjustmentFactor.toFixed(2)}.`}
           >
             <input type="number" step="0.01" min="0.3" max="1.5" className={inputClass}
               value={draft.garminAdjustmentFactor}
-              onChange={(e) => set('garminAdjustmentFactor', num(e.target.value, 0.85))} />
+              onChange={(e) => set('garminAdjustmentFactor', num(e.target.value, DEFAULT_SETTINGS.garminAdjustmentFactor))} />
           </Field>
           <Field
             label="MyFitnessPal intake factor"
@@ -175,22 +176,57 @@ export function SettingsPage() {
         </div>
       </Card>
 
-      <Card title="Units and Locale">
+      {/*
+       * No unit selectors here, deliberately.
+       *
+       * They were rendered and only three files honoured them. Mission,
+       * Analytics, Display and the dashboard all format weight as `lb` and the
+       * waist stat as `cm` unconditionally, so switching to metric produced
+       * kilograms labelled "lb": a control that silently mislabels the data is
+       * worse than no control.
+       *
+       * Removed rather than finished because the units are a fixed product
+       * decision, not a preference (PRODUCT.md: pounds for weight, centimetres
+       * for circumferences, not configurable). The settings fields still exist
+       * and still default correctly, so nothing downstream changed; only the
+       * promise was withdrawn.
+       */}
+      {/*
+       * The rest of the app, reachable.
+       *
+       * On a phone the "More" tab is a hamburger icon that goes straight here,
+       * and nothing here led onward, so Integrations and Display could not be
+       * opened from the device the app is mostly used on. That is the screen
+       * answering "did my sync actually run", which is the question asked at
+       * the exact moment a number looks wrong.
+       */}
+      <Card title="More" className="lg:hidden">
+        <div className="grid gap-2">
+          <NavLink
+            to="/integrations"
+            className="tap justify-between rounded-[var(--radius-control)] bg-[var(--color-inset)]
+              px-4 text-sm font-semibold text-[var(--color-text)] ring-1 ring-inset
+              ring-[var(--color-edge)] transition duration-200 hover:bg-[var(--color-card-raised)]
+              active:scale-[0.99]"
+          >
+            Integrations
+            <span className="text-xs font-medium text-[var(--color-muted)]">Sync status</span>
+          </NavLink>
+          <NavLink
+            to="/display"
+            className="tap justify-between rounded-[var(--radius-control)] bg-[var(--color-inset)]
+              px-4 text-sm font-semibold text-[var(--color-text)] ring-1 ring-inset
+              ring-[var(--color-edge)] transition duration-200 hover:bg-[var(--color-card-raised)]
+              active:scale-[0.99]"
+          >
+            Display Mode
+            <span className="text-xs font-medium text-[var(--color-muted)]">Full-screen</span>
+          </NavLink>
+        </div>
+      </Card>
+
+      <Card title="Locale">
         <div className="grid gap-3 sm:grid-cols-3">
-          <Field label="Weight and distance">
-            <select className={inputClass} value={draft.units}
-              onChange={(e) => set('units', e.target.value as Settings['units'])}>
-              <option value="imperial">Pounds and miles</option>
-              <option value="metric">Kilograms and kilometres</option>
-            </select>
-          </Field>
-          <Field label="Circumferences">
-            <select className={inputClass} value={draft.lengthUnits}
-              onChange={(e) => set('lengthUnits', e.target.value as Settings['units'])}>
-              <option value="metric">Centimetres</option>
-              <option value="imperial">Inches</option>
-            </select>
-          </Field>
           <Field label="Timezone" hint="Used to decide which day is today">
             <input className={inputClass} value={draft.timezone} onChange={(e) => set('timezone', e.target.value)} />
           </Field>
@@ -241,8 +277,8 @@ export function SettingsPage() {
           </Button>
         </div>
         <p className="mt-3 text-xs text-[var(--color-muted)]">
-          Locking asks for the code again. Signing out clears the session, so the next
-          visit needs the full email and password.
+          Both ask for the code again on the next visit. Signing out also clears the
+          stored session, so it is the one to use on a device you are handing over.
         </p>
       </Card>
     </div>

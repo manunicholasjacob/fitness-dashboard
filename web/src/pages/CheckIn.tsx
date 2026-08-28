@@ -31,6 +31,15 @@ function rangeError(raw: string, min: number, max: number, unit: string): string
   return null
 }
 
+/**
+ * A form message and what it means, kept together.
+ *
+ * Success used to be inferred by comparing the rendered copy to the literal
+ * 'Saved.', so rewording the confirmation would have turned it red without
+ * touching a colour.
+ */
+type FormStatus = { kind: 'ok' | 'error'; text: string } | null
+
 export function CheckIn() {
   const { body, settings, refresh } = useData()
 
@@ -49,8 +58,12 @@ export function CheckIn() {
   const [hip, setHip] = useState('')
   const [notes, setNotes] = useState('')
   const [showMore, setShowMore] = useState(false)
-  const [status, setStatus] = useState<string | null>(null)
+  const [status, setStatus] = useState<FormStatus>(null)
   const [busy, setBusy] = useState(false)
+
+  // Tone travels with the message rather than being re-derived by comparing the
+  // copy. Deciding "is this a success" by string-matching 'Saved.' means editing
+  // that sentence silently turns it red.
 
   // Nutrition fallback, used on the days MyFitnessPal did not sync.
   const [calories, setCalories] = useState('')
@@ -59,7 +72,7 @@ export function CheckIn() {
   const [fat, setFat] = useState('')
   const [fiber, setFiber] = useState('')
   const [sugar, setSugar] = useState('')
-  const [nutritionStatus, setNutritionStatus] = useState<string | null>(null)
+  const [nutritionStatus, setNutritionStatus] = useState<FormStatus>(null)
 
   const imperialWeight = settings.units === 'imperial'
   const imperialLength = settings.lengthUnits === 'imperial'
@@ -101,7 +114,7 @@ export function CheckIn() {
     const h = parseOptional(hip)
 
     if (w === null && wa === null && n === null && h === null && notes.trim() === '') {
-      setStatus('Nothing to save.')
+      setStatus({ kind: 'error', text: 'Nothing to save.' })
       return
     }
 
@@ -118,14 +131,14 @@ export function CheckIn() {
         source: 'manual',
       })
       await refresh()
-      setStatus('Saved.')
+      setStatus({ kind: 'ok', text: 'Saved.' })
       setWeight('')
       setWaist('')
       setNeck('')
       setHip('')
       setNotes('')
     } catch (err) {
-      setStatus(err instanceof Error ? err.message : 'Save failed.')
+      setStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Save failed.' })
     } finally {
       setBusy(false)
     }
@@ -135,7 +148,7 @@ export function CheckIn() {
     e.preventDefault()
     const cals = parseOptional(calories)
     if (cals === null) {
-      setNutritionStatus('Calories are required.')
+      setNutritionStatus({ kind: 'error', text: 'Calories are required.' })
       return
     }
     setBusy(true)
@@ -153,7 +166,7 @@ export function CheckIn() {
         }),
       )
       await refresh()
-      setNutritionStatus('Saved.')
+      setNutritionStatus({ kind: 'ok', text: 'Saved.' })
       setCalories('')
       setProtein('')
       setCarbs('')
@@ -161,7 +174,7 @@ export function CheckIn() {
       setFiber('')
       setSugar('')
     } catch (err) {
-      setNutritionStatus(err instanceof Error ? err.message : 'Save failed.')
+      setNutritionStatus({ kind: 'error', text: err instanceof Error ? err.message : 'Save failed.' })
     } finally {
       setBusy(false)
     }
@@ -229,7 +242,9 @@ export function CheckIn() {
           <button
             type="button"
             onClick={() => setShowMore((v) => !v)}
-            className="mt-3 text-xs font-semibold text-[var(--color-muted)] underline-offset-2 hover:underline"
+            className="tap mt-2 -ml-2 rounded-[var(--radius-inner)] px-2 text-xs font-semibold
+              text-[var(--color-muted)] transition duration-200 hover:bg-[var(--color-inset)]
+              hover:text-[var(--color-text)] active:scale-[0.98]"
           >
             {showMore ? 'Hide' : 'Add'} neck, hips and notes
           </button>
@@ -277,11 +292,14 @@ export function CheckIn() {
             </Button>
             {status && (
               <span
+                role={status.kind === 'error' ? 'alert' : 'status'}
                 className={`text-xs ${
-                  status === 'Saved.' ? 'text-[var(--color-accent-text)]' : 'text-[var(--color-danger-text)]'
+                  status.kind === 'ok'
+                    ? 'text-[var(--color-accent-text)]'
+                    : 'text-[var(--color-danger-text)]'
                 }`}
               >
-                {status}
+                {status.text}
               </span>
             )}
           </div>
@@ -351,10 +369,12 @@ export function CheckIn() {
             {nutritionStatus && (
               <span
                 className={`text-xs ${
-                  nutritionStatus === 'Saved.' ? 'text-[var(--color-accent-text)]' : 'text-[var(--color-danger-text)]'
+                  nutritionStatus.kind === 'ok'
+                    ? 'text-[var(--color-accent-text)]'
+                    : 'text-[var(--color-danger-text)]'
                 }`}
               >
-                {nutritionStatus}
+                {nutritionStatus.text}
               </span>
             )}
           </div>
@@ -368,6 +388,11 @@ export function CheckIn() {
 
 function RecentEntries() {
   const { body, settings, refresh } = useData()
+  // Which row is asking to be confirmed. Two taps, not a browser dialog: the
+  // confirmation belongs beside the row being destroyed, and confirm() on a
+  // phone is a modal for a task that needs no protected focus.
+  const [confirming, setConfirming] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState<string | null>(null)
   const recent = body.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 14)
 
   const weightUnit = settings.units === 'imperial' ? 'lb' : 'kg'
@@ -400,17 +425,55 @@ function RecentEntries() {
                 <td className="px-2 py-2 text-right font-semibold">{dispW(e.weightKg)}</td>
                 <td className="px-2 py-2 text-right">{dispL(e.waistCm)}</td>
                 <td className="px-2 py-2 text-right">{dispL(e.neckCm)}</td>
-                <td className="px-2 py-2 text-right">
-                  <button
-                    onClick={async () => {
-                      await api.deleteBodyEntry(e.date)
-                      await refresh()
-                    }}
-                    className="text-xs text-[var(--color-muted)] hover:text-[var(--color-danger-text)]"
-                    aria-label={`Delete check-in for ${e.date}`}
-                  >
-                    Delete
-                  </button>
+                <td className="py-1 pl-2 pr-0 text-right">
+                  {confirming === e.date ? (
+                    <span className="inline-flex items-center gap-1">
+                      <button
+                        onClick={async () => {
+                          setDeleting(e.date)
+                          try {
+                            await api.deleteBodyEntry(e.date)
+                            await refresh()
+                          } finally {
+                            setDeleting(null)
+                            setConfirming(null)
+                          }
+                        }}
+                        disabled={deleting !== null}
+                        className="-my-1 min-h-11 rounded-[var(--radius-inner)] px-2 text-xs
+                          font-semibold text-[var(--color-danger-text)] transition duration-200
+                          hover:bg-[var(--color-danger-quiet)] active:scale-[0.96]
+                          disabled:opacity-50"
+                        aria-label={`Confirm deleting the check-in for ${e.date}`}
+                      >
+                        {deleting === e.date ? 'Deleting' : 'Delete'}
+                      </button>
+                      <button
+                        onClick={() => setConfirming(null)}
+                        disabled={deleting !== null}
+                        className="-my-1 min-h-11 rounded-[var(--radius-inner)] px-2 text-xs
+                          text-[var(--color-muted)] transition duration-200
+                          hover:bg-[var(--color-inset)] hover:text-[var(--color-text)]
+                          active:scale-[0.96] disabled:opacity-50"
+                      >
+                        Cancel
+                      </button>
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => setConfirming(e.date)}
+                      // min-h-11 with a negative margin: a 44px target that does
+                      // not stretch the row. It was 36x16, unguarded, on the one
+                      // screen operated one-handed at 6am.
+                      className="-my-1 min-h-11 rounded-[var(--radius-inner)] px-2 text-xs
+                        text-[var(--color-muted)] transition duration-200
+                        hover:bg-[var(--color-inset)] hover:text-[var(--color-danger-text)]
+                        active:scale-[0.96]"
+                      aria-label={`Delete check-in for ${e.date}`}
+                    >
+                      Delete
+                    </button>
+                  )}
                 </td>
               </tr>
             ))}

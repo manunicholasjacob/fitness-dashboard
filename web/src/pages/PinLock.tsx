@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
 import { MAX_CODE_LENGTH, MIN_CODE_LENGTH, markUnlocked, redeemCode } from '../lib/pin'
 
@@ -99,7 +99,7 @@ export function PinLock({
           bg-[radial-gradient(44%_46%_at_50%_50%,var(--hero-glow),var(--hero-glow-mid)_55%,transparent_78%)]"
       />
 
-      <div className="rise flex w-full max-w-[19rem] flex-col items-center">
+      <div className="flex w-full max-w-[19rem] flex-col items-center">
         <h1 className="flex items-center gap-2.5 text-center text-lg font-bold
           tracking-[0.22em] text-[var(--color-accent)]">
           <span
@@ -124,7 +124,7 @@ export function PinLock({
               key={i}
               // Filled dots grow very slightly, so entry registers as motion in
               // the corner of the eye and not only as a colour change.
-              className={`h-3.5 w-3.5 rounded-full transition duration-300
+              className={`h-3.5 w-3.5 rounded-full transition duration-200
                 ease-[cubic-bezier(0.32,0.72,0,1)] ${
                   error
                     ? 'scale-100 bg-[var(--color-danger)]'
@@ -161,7 +161,7 @@ export function PinLock({
             <span />
             <KeypadButton label="0" onPress={() => push('0')} disabled={busy} />
             <KeypadButton
-              label="&#9003;"
+              icon={<BackspaceIcon />}
               onPress={back}
               ariaLabel="Delete last digit"
               disabled={busy}
@@ -174,14 +174,42 @@ export function PinLock({
   )
 }
 
+/**
+ * Backspace, drawn rather than borrowed.
+ *
+ * This was U+232B, the Unicode erase-to-the-left glyph. A text glyph standing
+ * in for an icon inherits the font's weight and metrics instead of the icon
+ * set's, so it sat heavier than every other stroke in the app and shifted with
+ * the typeface. Same 1.5 stroke as the navigation icons.
+ */
+function BackspaceIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-6 w-6"
+      aria-hidden="true"
+    >
+      <path d="M20 6H9.5a2 2 0 0 0-1.5.68l-4.2 4.7a1 1 0 0 0 0 1.34l4.2 4.7A2 2 0 0 0 9.5 18H20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2z" />
+      <path d="M17 9.5 12.5 14M12.5 9.5 17 14" />
+    </svg>
+  )
+}
+
 function KeypadButton({
   label,
+  icon,
   onPress,
   ariaLabel,
   disabled = false,
   muted = false,
 }: {
-  label: string
+  label?: string
+  icon?: ReactNode
   onPress: () => void
   ariaLabel?: string
   disabled?: boolean
@@ -212,7 +240,7 @@ function KeypadButton({
         disabled:opacity-40 disabled:active:scale-100
         ${muted ? 'text-[var(--color-muted)]' : 'text-[var(--color-text)]'}`}
     >
-      {label === '&#9003;' ? '⌫' : label}
+      {icon ?? label}
     </button>
   )
 }

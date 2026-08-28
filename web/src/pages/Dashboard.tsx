@@ -42,12 +42,7 @@ export function Dashboard() {
 
   return (
     <div className="space-y-5">
-      {/* Staggered entry, six steps deep. Past the visible fold the delay would
-          outlast the scroll and content would read as missing, so everything
-          below rides the last step. */}
-      <div className="rise rise-1">
-        <MissionCard />
-      </div>
+      <MissionCard />
 
       {/*
        * The numbers that answer "how am I doing" without scrolling.
@@ -58,34 +53,24 @@ export function Dashboard() {
        * figures and stack beside it. Equal thirds would give three unequal
        * things the same emphasis and leave the eye with nowhere to land.
        */}
-      <div className="grid items-stretch gap-5 lg:grid-cols-12">
-        <div className="rise rise-2 lg:col-span-7">
+      <div className="grid min-w-0 items-stretch gap-5 lg:grid-cols-12">
+        <div className="min-w-0 lg:col-span-7">
           <TodayEnergyCard />
         </div>
-        <div className="grid gap-5 lg:col-span-5">
-          <div className="rise rise-3">
-            <MorningMissionCard />
-          </div>
-          <div className="rise rise-4">
-            <WeightCard />
-          </div>
+        <div className="grid min-w-0 gap-5 lg:col-span-5">
+          <MorningMissionCard />
+          <WeightCard />
         </div>
       </div>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        <div className="rise rise-5">
-          <NutritionCard />
-        </div>
-        <div className="rise rise-5">
-          <TodayActivityCard />
-        </div>
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+        <NutritionCard />
+        <TodayActivityCard />
       </div>
 
-      <div className="rise rise-6">
-        <PeriodDeficitCard />
-      </div>
+      <PeriodDeficitCard />
 
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
         <Card title="Cumulative Deficit Trend">
           {cumulative.length > 1 ? (
             <Suspense fallback={<ChartSkeleton />}>
@@ -160,12 +145,12 @@ function DashboardSkeleton() {
       <div className={`${block} h-64 rounded-[var(--radius-hero)]`} />
       <div className="grid gap-5 lg:grid-cols-12">
         <div className={`${block} h-72 lg:col-span-7`} />
-        <div className="grid gap-5 lg:col-span-5">
+        <div className="grid min-w-0 gap-5 lg:col-span-5">
           <div className={`${block} h-[8.5rem]`} />
           <div className={`${block} h-[8.5rem]`} />
         </div>
       </div>
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid min-w-0 gap-5 lg:grid-cols-2">
         <div className={`${block} h-72`} />
         <div className={`${block} h-72`} />
       </div>

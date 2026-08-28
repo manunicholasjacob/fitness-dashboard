@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { NavLink, useSearchParams } from 'react-router-dom'
 import { useData } from '../lib/data'
 import { missionProgress } from '../core/energy'
 import { morningStats } from '../core/morning'
@@ -37,18 +38,44 @@ export function Display() {
   const smoothed = rollingAverage(wPoints, Math.min(7, wPoints.length || 1))
   const weightTrend = smoothed.length ? (smoothed[smoothed.length - 1].average ?? smoothed[smoothed.length - 1].value) : null
 
+  const [params] = useSearchParams()
+  const kiosk = params.get('kiosk') === '1'
   const week = summarize(filterActivities(activities, resolveRange('week')))
   const monthRun = runningStats(filterActivities(activities, resolveRange('month')))
 
   return (
-    <div className="min-h-screen bg-[var(--color-ink)] p-6 lg:p-10">
-      <header className="flex items-baseline justify-between">
+    <div className="min-h-[100dvh] bg-[var(--color-ink)] p-6 lg:p-10">
+      <header className="flex items-baseline justify-between gap-4">
         <h1 className="text-sm font-bold uppercase tracking-[0.3em] text-[var(--color-accent-text)] lg:text-lg">
           Energy Deficit Mission
         </h1>
-        <p className="tnum text-sm text-[var(--color-muted)] lg:text-xl">
-          {clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-        </p>
+        <div className="flex items-baseline gap-5">
+          <p className="tnum text-sm text-[var(--color-muted)] lg:text-xl">
+            {clock.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+          </p>
+          {/*
+           * The way out.
+           *
+           * This route renders no navigation by design, and until now it
+           * rendered no links at all. Installed to the home screen there is no
+           * browser back button, so opening it once left the app with no exit
+           * short of clearing site data. A kiosk is a mode; a mode needs a door.
+           *
+           * Quiet enough to disappear across a room, and `?kiosk=1` removes it
+           * for a display that genuinely wants nothing.
+           */}
+          {!kiosk && (
+            <NavLink
+              to="/"
+              className="rounded-full px-3 py-1 text-xs text-[var(--color-faint)] transition
+                duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] hover:bg-[var(--color-card)]
+                hover:text-[var(--color-text)] focus-visible:text-[var(--color-text)]
+                lg:text-sm"
+            >
+              Exit
+            </NavLink>
+          )}
+        </div>
       </header>
 
       <section className="mt-8 text-center lg:mt-12">

@@ -75,7 +75,7 @@ export function Analytics() {
           <button
             key={label}
             onClick={() => setWindow(n)}
-            className={`min-h-9 rounded-lg px-3 text-xs font-semibold transition ${
+            className={`min-h-11 rounded-[var(--radius-inner)] px-3.5 text-xs font-semibold transition duration-200 ease-[cubic-bezier(0.32,0.72,0,1)] active:scale-[0.97] ${
               window === n
                 ? 'bg-[var(--color-accent-fill)] text-[var(--color-on-accent)]'
                 : 'border border-[var(--color-edge)] text-[var(--color-muted)] hover:text-[var(--color-text)]'

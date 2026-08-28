@@ -156,6 +156,9 @@ export function ProgressBar({
       aria-valuemax={100}
     >
       <div
+        // The one long transition in the app, and the only authored moment:
+        // this animates a value change rather than a pointer state, so it is
+        // conveying something rather than making someone wait.
         className={`h-full rounded-full transition-[width] duration-700
           ease-[cubic-bezier(0.32,0.72,0,1)] ${bg}`}
         style={{ width: `${drawn}%` }}
